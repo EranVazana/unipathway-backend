@@ -1,0 +1,1278 @@
+{
+  "info": {
+    "name": "UniPathway API",
+    "description": "Full test collection for UniPathway backend API (Assignment 2)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET all users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET user by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET user by ID - 404",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\",\n  \"psychometricScores\": {\n    \"verbal\": 125,\n    \"quantitative\": 132,\n    \"english\": 119\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\":     { \"grade\": 80, \"units\": 2 },\n    \"literature\":       { \"grade\": 78, \"units\": 2 },\n    \"hebrewExpression\": { \"grade\": 82, \"units\": 2 },\n    \"history\":          { \"grade\": 75, \"units\": 2 },\n    \"civics\":           { \"grade\": 79, \"units\": 2 },\n    \"mathematics\":      { \"grade\": 88, \"units\": 4 },\n    \"english\":          { \"grade\": 91, \"units\": 5 }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create user - 400 missing fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Tal\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create user - 400 invalid psychometric",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\",\n  \"psychometricScores\": {\n    \"verbal\": 200,\n    \"quantitative\": 132,\n    \"english\": 119\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create user - 403 forbidden (user role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Eran\",\n  \"lastName\": \"Vazana\",\n  \"userRole\": \"admin\",\n  \"psychometricScores\": {\n    \"verbal\": 136,\n    \"quantitative\": 149,\n    \"english\": 141\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update user - 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ghost\",\n  \"lastName\": \"User\",\n  \"userRole\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE user",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "4"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE user - 403 forbidden (manager role)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "manager"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Universities",
+      "item": [
+        {
+          "name": "GET all universities",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/universities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET universities by location",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/universities?location=Haifa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities"
+              ],
+              "query": [
+                {
+                  "key": "location",
+                  "value": "Haifa"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET university by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/universities/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET university by ID - 404",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/universities/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create university",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weizmann Institute\",\n  \"location\": \"Rehovot\",\n  \"logoUrl\": \"https://example.com/logos/weizmann.png\",\n  \"websiteUrl\": \"https://www.weizmann.ac.il\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/universities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create university - 400 missing fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weizmann Institute\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/universities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update university",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ben-Gurion University of the Negev\",\n  \"location\": \"Beer-Sheva\",\n  \"logoUrl\": \"https://example.com/logos/bgu-updated.png\",\n  \"websiteUrl\": \"https://www.bgu.ac.il\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/universities/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE university",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/universities/6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities",
+                "6"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Departments",
+      "item": [
+        {
+          "name": "GET all departments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET departments by major",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/departments?major=Computer Science",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ],
+              "query": [
+                {
+                  "key": "major",
+                  "value": "Computer Science"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET departments by universityId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/departments?universityId=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ],
+              "query": [
+                {
+                  "key": "universityId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET department by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/departments/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET department by ID - 404",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/departments/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"universityId\": 2,\n  \"majorName\": \"Data Science\",\n  \"degreeType\": \"B.Sc\",\n  \"faculty\": \"Exact Sciences\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create department - 400 missing fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"majorName\": \"Data Science\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update department",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"universityId\": 1,\n  \"majorName\": \"Computer Science\",\n  \"degreeType\": \"B.Sc\",\n  \"faculty\": \"Natural Sciences & Math\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE department",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/9",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "9"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admission Thresholds",
+      "item": [
+        {
+          "name": "GET all thresholds",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET thresholds by departmentId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds?departmentId=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET thresholds by year",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds?year=2024",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2024"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET threshold by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET threshold by ID - 404",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create threshold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.40, \"psychometricWeight\": 0.60 },\n  \"sekemBonuses\": [\n    { \"condition\": \"5-unit Math\", \"points\": 7 }\n  ],\n  \"minSekem\": 163\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create threshold - 400 invalid sekemType",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"invalid\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.40, \"psychometricWeight\": 0.60 },\n  \"minSekem\": 163\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create threshold - 400 weights dont sum to 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.50, \"psychometricWeight\": 0.60 },\n  \"minSekem\": 163\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update threshold",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": 1,\n  \"year\": 2023,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.40, \"psychometricWeight\": 0.60 },\n  \"sekemBonuses\": [\n    { \"condition\": \"5-unit Math\", \"points\": 7 },\n    { \"condition\": \"Periphery resident\", \"points\": 5 }\n  ],\n  \"minSekem\": 154\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE threshold",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds/12",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds",
+                "12"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Watchlist",
+      "item": [
+        {
+          "name": "GET all watchlist entries",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET watchlist by userId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/watchlist?userId=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET watchlist by intent status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/watchlist?status=Interested",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Interested"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET watchlist by sekemStatus",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/watchlist?sekemStatus=passed-required-acceptance-score",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ],
+              "query": [
+                {
+                  "key": "sekemStatus",
+                  "value": "passed-required-acceptance-score"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET watchlist entry by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/watchlist/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET watchlist entry - 404",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/watchlist/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST add to watchlist - default status (Interested)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"departmentId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST add to watchlist - explicit Applied",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 3,\n  \"departmentId\": 5,\n  \"status\": \"Applied\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST add to watchlist - 400 client sent sekemStatus",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 3,\n  \"status\": \"passed-required-acceptance-score\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST add to watchlist - 400 invalid status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 3,\n  \"status\": \"Maybe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST add to watchlist - 400 duplicate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST add to watchlist - 404 user not found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 999,\n  \"departmentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update watchlist intent status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Applied\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist",
+                "3"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update watchlist - 400 client sent sekemStatus",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"passed-required-acceptance-score\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist",
+                "3"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE watchlist entry",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlist/9",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist",
+                "9"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
