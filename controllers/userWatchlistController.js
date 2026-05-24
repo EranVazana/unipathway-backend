@@ -7,7 +7,6 @@ const failure = (code, message, details = {}) => ({
   error: { code, message, details }
 });
 
-// GET /watchlist  (?userId= &departmentId= &status= &sekemStatus=)
 function getAllWatchlist(req, res) {
   let result = [...userWatchlist];
   if (req.query.userId)       result = result.filter(w => w.userId       === parseInt(req.query.userId));
@@ -17,31 +16,23 @@ function getAllWatchlist(req, res) {
   res.status(200).json(success(result));
 }
 
-// GET /watchlist/:id
 function getWatchlistById(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid watchlist ID.', { param: 'id' }));
-  }
-  const entry = userWatchlist.find(w => w.watchlistId === id);
+  const entry = userWatchlist.find(w => w.watchlistId === req.parsedId);
   if (!entry) {
-    return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${req.parsedId} not found.`, { resource: 'watchlist', id: req.parsedId }));
   }
   res.status(200).json(success(entry));
 }
 
-// POST /watchlist
 function createWatchlistEntry(req, res) {
   const newEntry = {
     watchlistId:  getNextId(),
     userId:       req.body.userId,
     departmentId: req.body.departmentId,
-    status:       req.resolvedStatus,       // intent — defaulted to 'Interested' if not provided
-    sekemStatus:  req.resolvedSekemStatus   // always server-calculated
+    status:       req.resolvedStatus,
+    sekemStatus:  req.resolvedSekemStatus
   };
-
   userWatchlist.push(newEntry);
-
   res.status(201).json(success({
     watchlistId: newEntry.watchlistId,
     status:      newEntry.status,
@@ -50,20 +41,13 @@ function createWatchlistEntry(req, res) {
   }));
 }
 
-// PUT /watchlist/:id  — updates intent status only; sekemStatus is always recalculated
 function updateWatchlistEntry(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid watchlist ID.', { param: 'id' }));
-  }
-  const entry = userWatchlist.find(w => w.watchlistId === id);
+  const entry = userWatchlist.find(w => w.watchlistId === req.parsedId);
   if (!entry) {
-    return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${req.parsedId} not found.`, { resource: 'watchlist', id: req.parsedId }));
   }
-
   entry.status      = req.body.status;
   entry.sekemStatus = req.resolvedSekemStatus ?? entry.sekemStatus;
-
   res.status(200).json(success({
     watchlistId: entry.watchlistId,
     status:      entry.status,
@@ -71,24 +55,13 @@ function updateWatchlistEntry(req, res) {
   }));
 }
 
-// DELETE /watchlist/:id
 function deleteWatchlistEntry(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid watchlist ID.', { param: 'id' }));
-  }
-  const index = userWatchlist.findIndex(w => w.watchlistId === id);
+  const index = userWatchlist.findIndex(w => w.watchlistId === req.parsedId);
   if (index === -1) {
-    return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${req.parsedId} not found.`, { resource: 'watchlist', id: req.parsedId }));
   }
   userWatchlist.splice(index, 1);
-  res.status(200).json(success({ watchlistId: id }));
+  res.status(200).json(success({ watchlistId: req.parsedId }));
 }
 
-module.exports = {
-  getAllWatchlist,
-  getWatchlistById,
-  createWatchlistEntry,
-  updateWatchlistEntry,
-  deleteWatchlistEntry
-};
+module.exports = { getAllWatchlist, getWatchlistById, createWatchlistEntry, updateWatchlistEntry, deleteWatchlistEntry };

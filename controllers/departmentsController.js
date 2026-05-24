@@ -19,23 +19,16 @@ function getAllDepartments(req, res) {
 }
 
 function getDepartmentById(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid department ID.', { param: 'id' }));
-  }
-
-  const dept = departments.find(d => d.departmentId === id);
+  const dept = departments.find(d => d.departmentId === req.parsedId);
   if (!dept) {
-    return res.status(404).json(failure('NOT_FOUND', `Department with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Department with id ${req.parsedId} not found.`, { resource: 'department', id: req.parsedId }));
   }
-
   res.status(200).json(success(dept));
 }
 
 function createDepartment(req, res) {
   const { universityId, majorName, degreeType, faculty } = req.body;
   const now = new Date().toISOString();
-
   const newDept = {
     departmentId: getNextId(),
     universityId,
@@ -45,45 +38,31 @@ function createDepartment(req, res) {
     createDate: now,
     updateDate: now
   };
-
   departments.push(newDept);
   res.status(201).json(success({ departmentId: newDept.departmentId }));
 }
 
 function updateDepartment(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid department ID.', { param: 'id' }));
-  }
-
-  const dept = departments.find(d => d.departmentId === id);
+  const dept = departments.find(d => d.departmentId === req.parsedId);
   if (!dept) {
-    return res.status(404).json(failure('NOT_FOUND', `Department with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Department with id ${req.parsedId} not found.`, { resource: 'department', id: req.parsedId }));
   }
-
   const { universityId, majorName, degreeType, faculty } = req.body;
   dept.universityId = universityId;
   dept.majorName = majorName;
   dept.degreeType = degreeType;
   dept.faculty = faculty;
   dept.updateDate = new Date().toISOString();
-
   res.status(200).json(success({ departmentId: dept.departmentId }));
 }
 
 function deleteDepartment(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid department ID.', { param: 'id' }));
-  }
-
-  const index = departments.findIndex(d => d.departmentId === id);
+  const index = departments.findIndex(d => d.departmentId === req.parsedId);
   if (index === -1) {
-    return res.status(404).json(failure('NOT_FOUND', `Department with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Department with id ${req.parsedId} not found.`, { resource: 'department', id: req.parsedId }));
   }
-
   departments.splice(index, 1);
-  res.status(200).json(success({ departmentId: id }));
+  res.status(200).json(success({ departmentId: req.parsedId }));
 }
 
 module.exports = { getAllDepartments, getDepartmentById, createDepartment, updateDepartment, deleteDepartment };

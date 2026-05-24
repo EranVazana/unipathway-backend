@@ -5,24 +5,21 @@ const departmentsRouter = require('./routes/departmentsRoute');
 const universitiesRouter = require('./routes/universitiesRoute');
 const admissionThresholdsRouter = require('./routes/admissionThresholdsRoute');
 const userWatchlistRouter = require('./routes/userWatchlistRoute');
+const academicScoresRouter = require('./routes/academicScoresRoute');
 
 const app = express();
 const PORT = 3000;
 
-// Parse JSON bodies
 app.use(express.json());
-
-// Global logger middleware
 app.use(loggerMiddleware);
 
-// Routes
 app.use('/users', usersRouter);
 app.use('/departments', departmentsRouter);
 app.use('/universities', universitiesRouter);
 app.use('/admission-thresholds', admissionThresholdsRouter);
 app.use('/watchlist', userWatchlistRouter);
+app.use('/academic-scores', academicScoresRouter);
 
-// 404 handler for unknown routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -35,7 +32,6 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({

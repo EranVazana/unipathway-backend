@@ -77,7 +77,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\",\n  \"psychometricScores\": {\n    \"verbal\": 125,\n    \"quantitative\": 132,\n    \"english\": 119\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\":     { \"grade\": 80, \"units\": 2 },\n    \"literature\":       { \"grade\": 78, \"units\": 2 },\n    \"hebrewExpression\": { \"grade\": 82, \"units\": 2 },\n    \"history\":          { \"grade\": 75, \"units\": 2 },\n    \"civics\":           { \"grade\": 79, \"units\": 2 },\n    \"mathematics\":      { \"grade\": 88, \"units\": 4 },\n    \"english\":          { \"grade\": 91, \"units\": 5 }\n  }\n}"
+              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users",
@@ -120,7 +120,7 @@
           }
         },
         {
-          "name": "POST create user - 400 invalid psychometric",
+          "name": "POST create user - 400 invalid userRole",
           "request": {
             "method": "POST",
             "header": [
@@ -135,7 +135,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\",\n  \"psychometricScores\": {\n    \"verbal\": 200,\n    \"quantitative\": 132,\n    \"english\": 119\n  }\n}"
+              "raw": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"userRole\": \"superadmin\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users",
@@ -149,7 +149,36 @@
           }
         },
         {
-          "name": "POST create user - 403 forbidden (user role)",
+          "name": "POST create user - 403 forbidden (editor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"userRole\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create user - 403 forbidden (user)",
           "request": {
             "method": "POST",
             "header": [
@@ -164,7 +193,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Tal\",\n  \"lastName\": \"Shapira\",\n  \"userRole\": \"user\"\n}"
+              "raw": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"userRole\": \"user\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users",
@@ -193,7 +222,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Eran\",\n  \"lastName\": \"Vazana\",\n  \"userRole\": \"admin\",\n  \"psychometricScores\": {\n    \"verbal\": 136,\n    \"quantitative\": 149,\n    \"english\": 141\n  }\n}"
+              "raw": "{\n  \"firstName\": \"Eran\",\n  \"lastName\": \"Vazana\",\n  \"userRole\": \"admin\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users/1",
@@ -223,7 +252,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Ghost\",\n  \"lastName\": \"User\",\n  \"userRole\": \"user\"\n}"
+              "raw": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"userRole\": \"user\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users/999",
@@ -233,6 +262,36 @@
               "path": [
                 "users",
                 "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update user - 403 (editor)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"X\",\n  \"lastName\": \"Y\",\n  \"userRole\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
               ]
             }
           }
@@ -260,13 +319,13 @@
           }
         },
         {
-          "name": "DELETE user - 403 forbidden (manager role)",
+          "name": "DELETE user - 403 (editor)",
           "request": {
             "method": "DELETE",
             "header": [
               {
                 "key": "x-user-role",
-                "value": "manager"
+                "value": "editor"
               }
             ],
             "url": {
@@ -355,7 +414,7 @@
           }
         },
         {
-          "name": "POST create university",
+          "name": "POST create university (admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -384,6 +443,35 @@
           }
         },
         {
+          "name": "POST create university (editor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reichman University\",\n  \"location\": \"Herzliya\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/universities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities"
+              ]
+            }
+          }
+        },
+        {
           "name": "POST create university - 400 missing fields",
           "request": {
             "method": "POST",
@@ -399,7 +487,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Weizmann Institute\"\n}"
+              "raw": "{\n  \"name\": \"Only Name\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/universities",
@@ -413,7 +501,36 @@
           }
         },
         {
-          "name": "PUT update university",
+          "name": "POST create university - 403 (user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"X\",\n  \"location\": \"Y\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/universities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update university (editor)",
           "request": {
             "method": "PUT",
             "header": [
@@ -423,12 +540,12 @@
               },
               {
                 "key": "x-user-role",
-                "value": "admin"
+                "value": "editor"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Ben-Gurion University of the Negev\",\n  \"location\": \"Beer-Sheva\",\n  \"logoUrl\": \"https://example.com/logos/bgu-updated.png\",\n  \"websiteUrl\": \"https://www.bgu.ac.il\"\n}"
+              "raw": "{\n  \"name\": \"Ben-Gurion University of the Negev\",\n  \"location\": \"Beer-Sheva\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/universities/1",
@@ -443,7 +560,7 @@
           }
         },
         {
-          "name": "DELETE university",
+          "name": "DELETE university (admin)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -460,6 +577,28 @@
               "path": [
                 "universities",
                 "6"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE university - 403 (editor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/universities/5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universities",
+                "5"
               ]
             }
           }
@@ -559,7 +698,7 @@
           }
         },
         {
-          "name": "POST create department",
+          "name": "POST create department (editor)",
           "request": {
             "method": "POST",
             "header": [
@@ -569,7 +708,7 @@
               },
               {
                 "key": "x-user-role",
-                "value": "admin"
+                "value": "editor"
               }
             ],
             "body": {
@@ -617,6 +756,35 @@
           }
         },
         {
+          "name": "POST create department - 403 (user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"universityId\": 1,\n  \"majorName\": \"X\",\n  \"degreeType\": \"B.Sc\",\n  \"faculty\": \"Y\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            }
+          }
+        },
+        {
           "name": "PUT update department",
           "request": {
             "method": "PUT",
@@ -627,7 +795,7 @@
               },
               {
                 "key": "x-user-role",
-                "value": "admin"
+                "value": "editor"
               }
             ],
             "body": {
@@ -647,7 +815,7 @@
           }
         },
         {
-          "name": "DELETE department",
+          "name": "DELETE department (admin)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -664,6 +832,28 @@
               "path": [
                 "departments",
                 "9"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE department - 403 (editor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/8",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "8"
               ]
             }
           }
@@ -763,7 +953,7 @@
           }
         },
         {
-          "name": "POST create threshold",
+          "name": "POST create threshold (editor)",
           "request": {
             "method": "POST",
             "header": [
@@ -773,12 +963,12 @@
               },
               {
                 "key": "x-user-role",
-                "value": "admin"
+                "value": "editor"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.40, \"psychometricWeight\": 0.60 },\n  \"sekemBonuses\": [\n    { \"condition\": \"5-unit Math\", \"points\": 7 }\n  ],\n  \"minSekem\": 163\n}"
+              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": {\n    \"bagrutWeight\": 0.4,\n    \"psychometricWeight\": 0.6\n  },\n  \"sekemBonuses\": [\n    {\n      \"condition\": \"5-unit Math\",\n      \"points\": 7\n    }\n  ],\n  \"minSekem\": 163\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admission-thresholds",
@@ -807,7 +997,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"invalid\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.40, \"psychometricWeight\": 0.60 },\n  \"minSekem\": 163\n}"
+              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"invalid\",\n  \"sekemWeights\": {\n    \"bagrutWeight\": 0.4,\n    \"psychometricWeight\": 0.6\n  },\n  \"minSekem\": 163\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admission-thresholds",
@@ -836,7 +1026,36 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.50, \"psychometricWeight\": 0.60 },\n  \"minSekem\": 163\n}"
+              "raw": "{\n  \"departmentId\": 3,\n  \"year\": 2025,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": {\n    \"bagrutWeight\": 0.5,\n    \"psychometricWeight\": 0.6\n  },\n  \"minSekem\": 163\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create threshold - 403 (user)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": 1,\n  \"year\": 2026,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": {\n    \"bagrutWeight\": 0.4,\n    \"psychometricWeight\": 0.6\n  },\n  \"minSekem\": 100\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admission-thresholds",
@@ -860,12 +1079,12 @@
               },
               {
                 "key": "x-user-role",
-                "value": "admin"
+                "value": "editor"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": 1,\n  \"year\": 2023,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": { \"bagrutWeight\": 0.40, \"psychometricWeight\": 0.60 },\n  \"sekemBonuses\": [\n    { \"condition\": \"5-unit Math\", \"points\": 7 },\n    { \"condition\": \"Periphery resident\", \"points\": 5 }\n  ],\n  \"minSekem\": 154\n}"
+              "raw": "{\n  \"departmentId\": 1,\n  \"year\": 2023,\n  \"sekemType\": \"quantitative\",\n  \"sekemWeights\": {\n    \"bagrutWeight\": 0.4,\n    \"psychometricWeight\": 0.6\n  },\n  \"sekemBonuses\": [\n    {\n      \"condition\": \"5-unit Math\",\n      \"points\": 7\n    }\n  ],\n  \"minSekem\": 154\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admission-thresholds/1",
@@ -880,7 +1099,7 @@
           }
         },
         {
-          "name": "DELETE threshold",
+          "name": "DELETE threshold (admin)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -900,6 +1119,365 @@
               ]
             }
           }
+        },
+        {
+          "name": "DELETE threshold - 403 (editor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admission-thresholds/11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admission-thresholds",
+                "11"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Academic Scores",
+      "item": [
+        {
+          "name": "GET all academic scores (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET all academic scores - 403 (editor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET academic scores by userId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores?userId=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET academic scores by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET academic scores by ID - 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores",
+                "999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create academic scores",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 4,\n  \"psychometricScores\": {\n    \"verbal\": 130,\n    \"quantitative\": 127,\n    \"english\": 143\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\": {\n      \"grade\": 80,\n      \"units\": 2\n    },\n    \"literature\": {\n      \"grade\": 78,\n      \"units\": 2\n    },\n    \"hebrewExpression\": {\n      \"grade\": 82,\n      \"units\": 2\n    },\n    \"history\": {\n      \"grade\": 75,\n      \"units\": 2\n    },\n    \"civics\": {\n      \"grade\": 79,\n      \"units\": 2\n    },\n    \"mathematics\": {\n      \"grade\": 88,\n      \"units\": 4\n    },\n    \"english\": {\n      \"grade\": 91,\n      \"units\": 5\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST academic scores - 400 missing userId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"psychometricScores\": {\n    \"verbal\": 110,\n    \"quantitative\": 120,\n    \"english\": 115\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\": {\n      \"grade\": 80,\n      \"units\": 2\n    },\n    \"literature\": {\n      \"grade\": 78,\n      \"units\": 2\n    },\n    \"hebrewExpression\": {\n      \"grade\": 82,\n      \"units\": 2\n    },\n    \"history\": {\n      \"grade\": 75,\n      \"units\": 2\n    },\n    \"civics\": {\n      \"grade\": 79,\n      \"units\": 2\n    },\n    \"mathematics\": {\n      \"grade\": 88,\n      \"units\": 4\n    },\n    \"english\": {\n      \"grade\": 91,\n      \"units\": 5\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST academic scores - 400 for admin user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"psychometricScores\": {\n    \"verbal\": 110,\n    \"quantitative\": 120,\n    \"english\": 115\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\": {\n      \"grade\": 80,\n      \"units\": 2\n    },\n    \"literature\": {\n      \"grade\": 78,\n      \"units\": 2\n    },\n    \"hebrewExpression\": {\n      \"grade\": 82,\n      \"units\": 2\n    },\n    \"history\": {\n      \"grade\": 75,\n      \"units\": 2\n    },\n    \"civics\": {\n      \"grade\": 79,\n      \"units\": 2\n    },\n    \"mathematics\": {\n      \"grade\": 88,\n      \"units\": 4\n    },\n    \"english\": {\n      \"grade\": 91,\n      \"units\": 5\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST academic scores - 400 bad psychometric",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"psychometricScores\": {\n    \"verbal\": 999,\n    \"quantitative\": 120,\n    \"english\": 115\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\": {\n      \"grade\": 80,\n      \"units\": 2\n    },\n    \"literature\": {\n      \"grade\": 78,\n      \"units\": 2\n    },\n    \"hebrewExpression\": {\n      \"grade\": 82,\n      \"units\": 2\n    },\n    \"history\": {\n      \"grade\": 75,\n      \"units\": 2\n    },\n    \"civics\": {\n      \"grade\": 79,\n      \"units\": 2\n    },\n    \"mathematics\": {\n      \"grade\": 88,\n      \"units\": 4\n    },\n    \"english\": {\n      \"grade\": 91,\n      \"units\": 5\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST academic scores - 403 (editor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"psychometricScores\": {\n    \"verbal\": 110,\n    \"quantitative\": 120,\n    \"english\": 115\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\": {\n      \"grade\": 80,\n      \"units\": 2\n    },\n    \"literature\": {\n      \"grade\": 78,\n      \"units\": 2\n    },\n    \"hebrewExpression\": {\n      \"grade\": 82,\n      \"units\": 2\n    },\n    \"history\": {\n      \"grade\": 75,\n      \"units\": 2\n    },\n    \"civics\": {\n      \"grade\": 79,\n      \"units\": 2\n    },\n    \"mathematics\": {\n      \"grade\": 88,\n      \"units\": 4\n    },\n    \"english\": {\n      \"grade\": 91,\n      \"units\": 5\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update academic scores",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"psychometricScores\": {\n    \"verbal\": 136,\n    \"quantitative\": 149,\n    \"english\": 141\n  },\n  \"bagrutScores\": {\n    \"bibleStudies\": {\n      \"grade\": 80,\n      \"units\": 2\n    },\n    \"literature\": {\n      \"grade\": 78,\n      \"units\": 2\n    },\n    \"hebrewExpression\": {\n      \"grade\": 82,\n      \"units\": 2\n    },\n    \"history\": {\n      \"grade\": 75,\n      \"units\": 2\n    },\n    \"civics\": {\n      \"grade\": 79,\n      \"units\": 2\n    },\n    \"mathematics\": {\n      \"grade\": 88,\n      \"units\": 4\n    },\n    \"english\": {\n      \"grade\": 91,\n      \"units\": 5\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE academic scores (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores",
+                "3"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE academic scores - 403 (editor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/academic-scores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "academic-scores",
+                "1"
+              ]
+            }
+          }
         }
       ]
     },
@@ -907,9 +1485,36 @@
       "name": "User Watchlist",
       "item": [
         {
-          "name": "GET all watchlist entries",
+          "name": "GET all watchlist (admin)",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET all watchlist - 403 (editor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/watchlist",
               "host": [
@@ -925,6 +1530,12 @@
           "name": "GET watchlist by userId",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/watchlist?userId=1",
               "host": [
@@ -946,6 +1557,12 @@
           "name": "GET watchlist by intent status",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/watchlist?status=Interested",
               "host": [
@@ -967,6 +1584,12 @@
           "name": "GET watchlist by sekemStatus",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/watchlist?sekemStatus=passed-required-acceptance-score",
               "host": [
@@ -988,6 +1611,12 @@
           "name": "GET watchlist entry by ID",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/watchlist/1",
               "host": [
@@ -1004,6 +1633,12 @@
           "name": "GET watchlist entry - 404",
           "request": {
             "method": "GET",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/watchlist/999",
               "host": [
@@ -1017,7 +1652,7 @@
           }
         },
         {
-          "name": "POST add to watchlist - default status (Interested)",
+          "name": "POST add to watchlist (default status)",
           "request": {
             "method": "POST",
             "header": [
@@ -1046,7 +1681,7 @@
           }
         },
         {
-          "name": "POST add to watchlist - explicit Applied",
+          "name": "POST add to watchlist (explicit Applied)",
           "request": {
             "method": "POST",
             "header": [
@@ -1075,36 +1710,7 @@
           }
         },
         {
-          "name": "POST add to watchlist - 400 client sent sekemStatus",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "x-user-role",
-                "value": "user"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 3,\n  \"status\": \"passed-required-acceptance-score\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/watchlist",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "watchlist"
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST add to watchlist - 400 invalid status",
+          "name": "POST watchlist - 400 invalid status",
           "request": {
             "method": "POST",
             "header": [
@@ -1133,7 +1739,7 @@
           }
         },
         {
-          "name": "POST add to watchlist - 400 duplicate",
+          "name": "POST watchlist - 400 sekemStatus as status",
           "request": {
             "method": "POST",
             "header": [
@@ -1148,7 +1754,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 1\n}"
+              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 3,\n  \"status\": \"passed-required-acceptance-score\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/watchlist",
@@ -1162,7 +1768,65 @@
           }
         },
         {
-          "name": "POST add to watchlist - 404 user not found",
+          "name": "POST watchlist - 400 for admin user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST watchlist - 400 for editor user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 4,\n  \"departmentId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST watchlist - 404 user not found",
           "request": {
             "method": "POST",
             "header": [
@@ -1191,7 +1855,65 @@
           }
         },
         {
-          "name": "PUT update watchlist intent status",
+          "name": "POST watchlist - 400 duplicate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "user"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"departmentId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST watchlist - 403 (editor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 2,\n  \"departmentId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT update watchlist status",
           "request": {
             "method": "PUT",
             "header": [
@@ -1221,7 +1943,7 @@
           }
         },
         {
-          "name": "PUT update watchlist - 400 client sent sekemStatus",
+          "name": "PUT watchlist - 400 sekemStatus as status",
           "request": {
             "method": "PUT",
             "header": [
@@ -1268,6 +1990,28 @@
               "path": [
                 "watchlist",
                 "9"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE watchlist - 403 (editor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-user-role",
+                "value": "editor"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlist/8",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist",
+                "8"
               ]
             }
           }

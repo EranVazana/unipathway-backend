@@ -12,73 +12,48 @@ function getAllUsers(req, res) {
 }
 
 function getUserById(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid user ID.', { param: 'id' }));
-  }
-
-  const user = users.find(u => u.userId === id);
+  const user = users.find(u => u.userId === req.parsedId);
   if (!user) {
-    return res.status(404).json(failure('NOT_FOUND', `User with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
-
   res.status(200).json(success(user));
 }
 
 function createUser(req, res) {
-  const { firstName, lastName, userRole, psychometricScores, bagrutScores } = req.body;
+  const { firstName, lastName, userRole } = req.body;
   const now = new Date().toISOString();
-
   const newUser = {
     userId: getNextId(),
     firstName,
     lastName,
     createDate: now,
     updateDate: now,
-    userRole,
-    psychometricScores: psychometricScores || null,
-    bagrutScores: bagrutScores || null
+    userRole
   };
-
   users.push(newUser);
   res.status(201).json(success({ userId: newUser.userId }));
 }
 
 function updateUser(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid user ID.', { param: 'id' }));
-  }
-
-  const user = users.find(u => u.userId === id);
+  const user = users.find(u => u.userId === req.parsedId);
   if (!user) {
-    return res.status(404).json(failure('NOT_FOUND', `User with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
-
-  const { firstName, lastName, userRole, psychometricScores, bagrutScores } = req.body;
+  const { firstName, lastName, userRole } = req.body;
   user.firstName = firstName;
   user.lastName = lastName;
   user.userRole = userRole;
-  user.psychometricScores = psychometricScores ?? user.psychometricScores;
-  user.bagrutScores = bagrutScores ?? user.bagrutScores;
   user.updateDate = new Date().toISOString();
-
   res.status(200).json(success({ userId: user.userId }));
 }
 
 function deleteUser(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid user ID.', { param: 'id' }));
-  }
-
-  const index = users.findIndex(u => u.userId === id);
+  const index = users.findIndex(u => u.userId === req.parsedId);
   if (index === -1) {
-    return res.status(404).json(failure('NOT_FOUND', `User with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
-
   users.splice(index, 1);
-  res.status(200).json(success({ userId: id }));
+  res.status(200).json(success({ userId: req.parsedId }));
 }
 
 module.exports = { getAllUsers, getUserById, createUser, updateUser, deleteUser };

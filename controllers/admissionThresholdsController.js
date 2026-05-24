@@ -7,7 +7,6 @@ const failure = (code, message, details = {}) => ({
   error: { code, message, details }
 });
 
-// GET /admission-thresholds  (?departmentId=1 &year=2024)
 function getAllThresholds(req, res) {
   let result = [...admissionThresholds];
   if (req.query.departmentId) {
@@ -19,23 +18,16 @@ function getAllThresholds(req, res) {
   res.status(200).json(success(result));
 }
 
-// GET /admission-thresholds/:id
 function getThresholdById(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid threshold ID.', { param: 'id' }));
-  }
-  const threshold = admissionThresholds.find(t => t.thresholdId === id);
+  const threshold = admissionThresholds.find(t => t.thresholdId === req.parsedId);
   if (!threshold) {
-    return res.status(404).json(failure('NOT_FOUND', `Threshold with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Threshold with id ${req.parsedId} not found.`, { resource: 'admissionThreshold', id: req.parsedId }));
   }
   res.status(200).json(success(threshold));
 }
 
-// POST /admission-thresholds
 function createThreshold(req, res) {
   const { departmentId, year, sekemType, sekemWeights, sekemBonuses, minSekem } = req.body;
-
   const newThreshold = {
     thresholdId: getNextId(),
     departmentId,
@@ -45,22 +37,15 @@ function createThreshold(req, res) {
     sekemBonuses: sekemBonuses || [],
     minSekem
   };
-
   admissionThresholds.push(newThreshold);
   res.status(201).json(success({ thresholdId: newThreshold.thresholdId }));
 }
 
-// PUT /admission-thresholds/:id
 function updateThreshold(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid threshold ID.', { param: 'id' }));
-  }
-  const threshold = admissionThresholds.find(t => t.thresholdId === id);
+  const threshold = admissionThresholds.find(t => t.thresholdId === req.parsedId);
   if (!threshold) {
-    return res.status(404).json(failure('NOT_FOUND', `Threshold with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Threshold with id ${req.parsedId} not found.`, { resource: 'admissionThreshold', id: req.parsedId }));
   }
-
   const { departmentId, year, sekemType, sekemWeights, sekemBonuses, minSekem } = req.body;
   threshold.departmentId = departmentId;
   threshold.year = year;
@@ -68,22 +53,16 @@ function updateThreshold(req, res) {
   threshold.sekemWeights = sekemWeights;
   threshold.sekemBonuses = sekemBonuses ?? threshold.sekemBonuses;
   threshold.minSekem = minSekem;
-
   res.status(200).json(success({ thresholdId: threshold.thresholdId }));
 }
 
-// DELETE /admission-thresholds/:id
 function deleteThreshold(req, res) {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    return res.status(400).json(failure('VALIDATION_ERROR', 'Invalid threshold ID.', { param: 'id' }));
-  }
-  const index = admissionThresholds.findIndex(t => t.thresholdId === id);
+  const index = admissionThresholds.findIndex(t => t.thresholdId === req.parsedId);
   if (index === -1) {
-    return res.status(404).json(failure('NOT_FOUND', `Threshold with id ${id} not found.`));
+    return res.status(404).json(failure('NOT_FOUND', `Threshold with id ${req.parsedId} not found.`, { resource: 'admissionThreshold', id: req.parsedId }));
   }
   admissionThresholds.splice(index, 1);
-  res.status(200).json(success({ thresholdId: id }));
+  res.status(200).json(success({ thresholdId: req.parsedId }));
 }
 
 module.exports = { getAllThresholds, getThresholdById, createThreshold, updateThreshold, deleteThreshold };
