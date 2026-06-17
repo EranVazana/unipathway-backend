@@ -39,7 +39,18 @@ function updateUser(req, res) {
   if (!user) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
+
   const { firstName, lastName, userRole } = req.body;
+
+  // Self-updating users cannot change their own role
+  if (req.isSelf && userRole !== user.userRole) {
+    return res.status(403).json(failure(
+      'FORBIDDEN',
+      'Users cannot change their own role. Only admins may modify userRole.',
+      { field: 'userRole' }
+    ));
+  }
+
   user.firstName = firstName;
   user.lastName = lastName;
   user.userRole = userRole;

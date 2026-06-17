@@ -50,7 +50,8 @@ The API base path is `/`. All resources are available directly under the root:
 
 - **IDs** are numeric, auto-incremented integers starting from 1. Each model maintains its own counter. New records created via POST never collide with existing mock IDs within a single server session.
 - **Data is in-memory only.** All data resets when the server restarts. MySQL will replace this in Assignment 3.
-- **Authentication is simulated** via the `x-user-role` request header (`admin`, `editor`, or `user`). No real login system exists at this stage. JWT will replace this in Assignment 3.
+- **Authentication is simulated** via the `x-user-role` request header (`admin`, `editor`, or `user`). The legacy value `manager` is accepted as an alias for `editor`. The optional `x-user-id` header identifies the current user, enabling self-update on their own user record. No real login system exists at this stage. JWT will replace this in Assignment 3.
+- **Self-update:** A user with `userRole: 'user'` can `PUT /users/:id` on their own record by sending `x-user-id` matching `:id`. Self-updates cannot change `userRole` — only admins can modify roles.
 - **`createDate` and `updateDate`** are set automatically by the server using `new Date().toISOString()`. They are never provided by the client.
 - **`sekemStatus`** on watchlist entries is always calculated server-side based on the user's academic scores vs the department's latest admission threshold. Clients cannot set or override this value.
 - **Academic scores are a separate resource.** Only users with `userRole: 'user'` can have academic scores. Admins and editors are platform operators, not students, so they have no scores. One scores entry per user is allowed.
@@ -144,7 +145,7 @@ The `x-user-role` header is required on all protected routes.
 |---|---|:---:|:---:|:---:|
 | **Users** | GET | ✅ | ✅ | ✅ |
 | | POST | ✅ | ❌ | ❌ |
-| | PUT | ✅ | ❌ | ❌ |
+| | PUT | ✅ | ❌ | ✅ (self only) |
 | | DELETE | ✅ | ❌ | ❌ |
 | **Universities** | GET | ✅ | ✅ | ✅ |
 | | POST | ✅ | ✅ | ❌ |
@@ -234,7 +235,7 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 | GET | /users | any | — | List all users |
 | GET | /users/:id | any | — | Get one user |
 | POST | /users | admin | — | Create user |
-| PUT | /users/:id | admin | — | Update user |
+| PUT | /users/:id | admin, self | — | Update user (users can self-update via `x-user-id` matching `:id`) |
 | DELETE | /users/:id | admin | — | Delete user |
 
 **POST / PUT body:**
@@ -519,4 +520,5 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 ## Notes
 
 - IDs are auto-incremented integers. Data resets on server restart (in-memory only).
-- The automated test script (`test.js`) requires Node.js 18+ for built-in `fetch`.
+- The automated test script (`docs/test.js`) requires Node.js 18+ for built-in `fetch`.
+- Last updated: 20.5.26

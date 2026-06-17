@@ -13,13 +13,17 @@ function validateUser(req, res, next) {
     ));
   }
 
-  if (!VALID_ROLES.includes(userRole)) {
+  // Accept 'manager' as an alias for 'editor'
+  const normalizedRole = userRole === 'manager' ? 'editor' : userRole;
+  if (!VALID_ROLES.includes(normalizedRole)) {
     return res.status(400).json(failure(
       'VALIDATION_ERROR',
       `userRole must be one of: ${VALID_ROLES.join(', ')}.`,
       { field: 'userRole', receivedValue: userRole, validValues: VALID_ROLES }
     ));
   }
+  // Normalize before passing to controller
+  req.body.userRole = normalizedRole;
 
   next();
 }

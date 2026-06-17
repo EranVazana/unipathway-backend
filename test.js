@@ -10,9 +10,10 @@ let passed = 0;
 let failed = 0;
 const results = [];
 
-async function request(method, path, { body, role } = {}) {
+async function request(method, path, { body, role, userId } = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (role) headers['x-user-role'] = role;
+  if (role)   headers['x-user-role'] = role;
+  if (userId) headers['x-user-id']   = String(userId);
 
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -113,6 +114,63 @@ async function testUsers() {
 
   r = await get(`/users/${newUserId}`);
   assert('GET after DELETE → 404',     r.status, 404);
+
+  // ─── manager-as-alias for editor ───
+  // POST university as 'manager' should be accepted (alias for editor)
+  r = await post('/universities', { name: 'AliasTestU', location: 'X' }, { role: 'manager' });
+  assert('POST /universities (manager alias) → 201',  r.status, 201);
+  if (r.data.data?.universityId) {
+    await del(`/universities/${r.data.data.universityId}`, { role: 'admin' });
+  }
+
+  // POST /users with userRole='manager' should normalize to 'editor'
+  r = await post('/users', { firstName: 'Mgr', lastName: 'Alias', userRole: 'manager' }, { role: 'admin' });
+  assert('POST /users (userRole=manager normalized) → 201', r.status, 201);
+  const mgrAliasId = r.data.data.userId;
+  r = await get(`/users/${mgrAliasId}`);
+  assert('Manager normalized to editor in storage',  r.data.data.userRole, 'editor');
+  await del(`/users/${mgrAliasId}`, { role: 'admin' });
+
+  // ─── PUT Self-Update ───
+  // Create a test user, then have them update themselves
+  let createR = await post('/users', { firstName: 'Self', lastName: 'Test', userRole: 'user' }, { role: 'admin' });
+  const selfUserId = createR.data.data.userId;
+
+  // User updates their own record - should succeed
+  r = await put(`/users/${selfUserId}`,
+    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'user' },
+    { role: 'user', userId: selfUserId });
+  assert('PUT self-update (matching x-user-id) → 200', r.status, 200);
+
+  r = await get(`/users/${selfUserId}`);
+  assert('Self-update persisted firstName',          r.data.data.firstName, 'SelfUpdated');
+
+  // User tries to update someone else - should be forbidden
+  r = await put(`/users/1`,
+    { firstName: 'Hacker', lastName: 'X', userRole: 'admin' },
+    { role: 'user', userId: selfUserId });
+  assert('PUT other user (user role) → 403',         r.status, 403);
+
+  // User tries to escalate their own role - should be forbidden
+  r = await put(`/users/${selfUserId}`,
+    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'admin' },
+    { role: 'user', userId: selfUserId });
+  assert('PUT self with role change → 403',          r.status, 403);
+
+  // User with no x-user-id header - should be forbidden
+  r = await put(`/users/${selfUserId}`,
+    { firstName: 'X', lastName: 'Y', userRole: 'user' },
+    { role: 'user' });
+  assert('PUT user role with no x-user-id → 403',    r.status, 403);
+
+  // Admin can still PUT anyone (no x-user-id needed)
+  r = await put(`/users/${selfUserId}`,
+    { firstName: 'AdminEdit', lastName: 'Test', userRole: 'user' },
+    { role: 'admin' });
+  assert('PUT (admin, no x-user-id) → 200',          r.status, 200);
+
+  // Cleanup
+  await del(`/users/${selfUserId}`, { role: 'admin' });
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -242,8 +300,8 @@ async function testAcademicScores() {
   r = await get('/academic-scores', { role: 'admin' });
   assert('GET /academic-scores (admin) → 200',            r.status, 200);
 
-  r = await get('/academic-scores?userId=1', { role: 'admin' });
-  assert('GET ?userId=1 → filtered',                      r.data.data.every(s => s.userId === 1), true);
+  r = await get('/academic-scores?userId=5', { role: 'admin' });
+  assert('GET ?userId=5 → filtered',                      r.data.data.every(s => s.userId === 5) && r.data.data.length > 0, true);
 
   r = await get('/academic-scores/999', { role: 'admin' });
   assert('GET /academic-scores/999 → 404',                r.status, 404);
@@ -319,17 +377,17 @@ async function testWatchlist() {
   r = await get('/watchlist', { role: 'admin' });
   assert('GET /watchlist (admin) → 200',                  r.status, 200);
 
-  r = await get('/watchlist?userId=1', { role: 'user' });
-  assert('GET ?userId=1 (user) → filtered',               r.data.data.every(w => w.userId === 1), true);
+  r = await get('/watchlist?userId=5', { role: 'user' });
+  assert('GET ?userId=5 (user) → filtered',               r.data.data.every(w => w.userId === 5), true);
 
   r = await get('/watchlist?sekemStatus=passed-required-acceptance-score', { role: 'admin' });
   assert('GET ?sekemStatus=passed → filtered',            r.data.data.every(w => w.sekemStatus === 'passed-required-acceptance-score'), true);
 
   // POST - invalid status values
-  r = await post('/watchlist', { userId: 2, departmentId: 3, status: 'Maybe' }, { role: 'user' });
+  r = await post('/watchlist', { userId: 5, departmentId: 8, status: 'Maybe' }, { role: 'user' });
   assert('POST (invalid status) → 400',                   r.status, 400);
 
-  r = await post('/watchlist', { userId: 2, departmentId: 3, status: 'passed-required-acceptance-score' }, { role: 'user' });
+  r = await post('/watchlist', { userId: 5, departmentId: 8, status: 'passed-required-acceptance-score' }, { role: 'user' });
   assert('POST (sekem status as status) → 400',           r.status, 400);
 
   // POST - cannot watchlist for an admin/editor user
@@ -343,15 +401,15 @@ async function testWatchlist() {
   r = await post('/watchlist', { userId: 999, departmentId: 1 }, { role: 'user' });
   assert('POST (user not found) → 404',                   r.status, 404);
 
-  r = await post('/watchlist', { userId: 2, departmentId: 999 }, { role: 'user' });
+  r = await post('/watchlist', { userId: 5, departmentId: 999 }, { role: 'user' });
   assert('POST (dept not found) → 404',                   r.status, 404);
 
   // POST - duplicate
-  r = await post('/watchlist', { userId: 1, departmentId: 1 }, { role: 'user' });
+  r = await post('/watchlist', { userId: 5, departmentId: 6 }, { role: 'user' });
   assert('POST (duplicate) → 400',                        r.status, 400);
 
-  // POST - success with default status
-  r = await post('/watchlist', { userId: 2, departmentId: 3 }, { role: 'user' });
+  // POST - success with default status (Tal hasn't watched dept 3 yet)
+  r = await post('/watchlist', { userId: 6, departmentId: 3 }, { role: 'user' });
   assert('POST /watchlist (default status) → 201',        r.status, 201);
   assert('POST → status defaults to Interested',          r.data.data.status, 'Interested');
   assert('POST → sekemStatus is server-calculated',
