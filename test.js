@@ -89,16 +89,16 @@ async function testUsers() {
   assert('POST /users (invalid userRole) → 400', r.status, 400);
 
   // POST - success
-  r = await post('/users', { firstName: 'Test', lastName: 'User', userRole: 'user' }, { role: 'admin' });
+  r = await post('/users', { firstName: 'Test', lastName: 'User', userRole: 'user', email: `test${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   assert('POST /users → 201',          r.status, 201);
   const newUserId = r.data.data.userId;
 
   // PUT - editor forbidden
-  r = await put(`/users/${newUserId}`, { firstName: 'X', lastName: 'Y', userRole: 'user' }, { role: 'editor' });
+  r = await put(`/users/${newUserId}`, { firstName: 'X', lastName: 'Y', userRole: 'user', email: 'x@y.com', password: 'pass1234' }, { role: 'editor' });
   assert('PUT /users (editor role) → 403',   r.status, 403);
 
   // PUT - admin allowed
-  r = await put(`/users/${newUserId}`, { firstName: 'Updated', lastName: 'User', userRole: 'user' }, { role: 'admin' });
+  r = await put(`/users/${newUserId}`, { firstName: 'Updated', lastName: 'User', userRole: 'user', email: `updated${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   assert('PUT /users/:id → 200',       r.status, 200);
 
   r = await get(`/users/${newUserId}`);
@@ -124,7 +124,7 @@ async function testUsers() {
   }
 
   // POST /users with userRole='manager' should normalize to 'editor'
-  r = await post('/users', { firstName: 'Mgr', lastName: 'Alias', userRole: 'manager' }, { role: 'admin' });
+  r = await post('/users', { firstName: 'Mgr', lastName: 'Alias', userRole: 'manager', email: `mgr${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   assert('POST /users (userRole=manager normalized) → 201', r.status, 201);
   const mgrAliasId = r.data.data.userId;
   r = await get(`/users/${mgrAliasId}`);
@@ -133,12 +133,12 @@ async function testUsers() {
 
   // ─── PUT Self-Update ───
   // Create a test user, then have them update themselves
-  let createR = await post('/users', { firstName: 'Self', lastName: 'Test', userRole: 'user' }, { role: 'admin' });
+  let createR = await post('/users', { firstName: 'Self', lastName: 'Test', userRole: 'user', email: `self${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   const selfUserId = createR.data.data.userId;
 
   // User updates their own record - should succeed
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'user' },
+    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'user', email: `selfupd${Date.now()}@unipathway.com`, password: 'pass1234' },
     { role: 'user', userId: selfUserId });
   assert('PUT self-update (matching x-user-id) → 200', r.status, 200);
 
@@ -147,25 +147,25 @@ async function testUsers() {
 
   // User tries to update someone else - should be forbidden
   r = await put(`/users/1`,
-    { firstName: 'Hacker', lastName: 'X', userRole: 'admin' },
+    { firstName: 'Hacker', lastName: 'X', userRole: 'admin', email: 'h@x.com', password: 'pass1234' },
     { role: 'user', userId: selfUserId });
   assert('PUT other user (user role) → 403',         r.status, 403);
 
   // User tries to escalate their own role - should be forbidden
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'admin' },
+    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'admin', email: `selfupd2${Date.now()}@unipathway.com`, password: 'pass1234' },
     { role: 'user', userId: selfUserId });
   assert('PUT self with role change → 403',          r.status, 403);
 
   // User with no x-user-id header - should be forbidden
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'X', lastName: 'Y', userRole: 'user' },
+    { firstName: 'X', lastName: 'Y', userRole: 'user', email: 'x@y.com', password: 'pass1234' },
     { role: 'user' });
   assert('PUT user role with no x-user-id → 403',    r.status, 403);
 
   // Admin can still PUT anyone (no x-user-id needed)
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'AdminEdit', lastName: 'Test', userRole: 'user' },
+    { firstName: 'AdminEdit', lastName: 'Test', userRole: 'user', email: `adminedit${Date.now()}@unipathway.com`, password: 'pass1234' },
     { role: 'admin' });
   assert('PUT (admin, no x-user-id) → 200',          r.status, 200);
 
@@ -307,7 +307,7 @@ async function testAcademicScores() {
   assert('GET /academic-scores/999 → 404',                r.status, 404);
 
   // Create a fresh user for testing scores
-  let createRes = await post('/users', { firstName: 'Score', lastName: 'Test', userRole: 'user' }, { role: 'admin' });
+  let createRes = await post('/users', { firstName: 'Score', lastName: 'Test', userRole: 'user', email: `score${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   const tempUserId = createRes.data.data.userId;
 
   // POST - editor forbidden
@@ -435,12 +435,56 @@ async function testWatchlist() {
   assert('DELETE /watchlist/:id → 200',                   r.status, 200);
 }
 
+
+// ──────────────────────────────────────────────────────────────────────
+async function testAuth() {
+  section('AUTHENTICATION / LOGIN');
+
+  // Successful login
+  let r = await post('/login', { email: 'dana@unipathway.com', password: 'dana1234' });
+  assert('POST /login (valid) → 200',                     r.status, 200);
+  assert('POST /login → returns user',                    r.data.data.user.userId, 5);
+  assert('POST /login → no passwordHash leaked',          r.data.data.user.passwordHash, undefined);
+  assert('POST /login → no passwordSalt leaked',          r.data.data.user.passwordSalt, undefined);
+
+  // Wrong password
+  r = await post('/login', { email: 'dana@unipathway.com', password: 'wrongpass' });
+  assert('POST /login (wrong password) → 401',            r.status, 401);
+  assert('POST /login (wrong password) → INVALID_CREDENTIALS', r.data.error.code, 'INVALID_CREDENTIALS');
+
+  // Unknown email
+  r = await post('/login', { email: 'nobody@unipathway.com', password: 'whatever' });
+  assert('POST /login (unknown email) → 401',             r.status, 401);
+
+  // Missing fields
+  r = await post('/login', { email: 'dana@unipathway.com' });
+  assert('POST /login (missing password) → 400',          r.status, 400);
+
+  // Invalid email format
+  r = await post('/login', { email: 'not-an-email', password: 'dana1234' });
+  assert('POST /login (bad email format) → 400',          r.status, 400);
+
+  // Newly created user can log in
+  const newEmail = `tester${Date.now()}@unipathway.com`;
+  let createR = await post('/users', {
+    firstName: 'Login', lastName: 'Tester', userRole: 'user',
+    email: newEmail, password: 'secret123'
+  }, { role: 'admin' });
+  const tempId = createR.data.data.userId;
+
+  r = await post('/login', { email: newEmail, password: 'secret123' });
+  assert('Login with newly created user → 200',           r.status, 200);
+
+  await del(`/users/${tempId}`, { role: 'admin' });
+}
+
 // ──────────────────────────────────────────────────────────────────────
 async function run() {
   console.log('🚀 UniPathway API - Automated Tests');
   console.log(`   Target: ${BASE_URL}\n`);
 
   try {
+    await testAuth();
     await testUsers();
     await testUniversities();
     await testDepartments();

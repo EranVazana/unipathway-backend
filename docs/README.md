@@ -37,6 +37,7 @@ The API base path is `/`. All resources are available directly under the root:
 
 | Resource              | Path                    |
 |-----------------------|-------------------------|
+| Authentication        | `/login`                |
 | Users                 | `/users`                |
 | Universities          | `/universities`         |
 | Departments           | `/departments`          |
@@ -50,8 +51,10 @@ The API base path is `/`. All resources are available directly under the root:
 
 - **IDs** are numeric, auto-incremented integers starting from 1. Each model maintains its own counter. New records created via POST never collide with existing mock IDs within a single server session.
 - **Data is in-memory only.** All data resets when the server restarts. MySQL will replace this in Assignment 3.
-- **Authentication is simulated** via the `x-user-role` request header (`admin`, `editor`, or `user`). The legacy value `manager` is accepted as an alias for `editor`. The optional `x-user-id` header identifies the current user, enabling self-update on their own user record. No real login system exists at this stage. JWT will replace this in Assignment 3.
+- **Login** is available via `POST /login` with email and password. Passwords are hashed with Node's built-in `crypto` (scrypt) plus a per-user random salt, and are never returned in any API response.
+- **Authorization is simulated** via the `x-user-role` request header (`admin`, `editor`, or `user`). The legacy value `manager` is accepted as an alias for `editor`. The optional `x-user-id` header identifies the current user, enabling self-update on their own user record. Token-based sessions (JWT) will replace the header simulation in Assignment 3.
 - **Self-update:** A user with `userRole: 'user'` can `PUT /users/:id` on their own record by sending `x-user-id` matching `:id`. Self-updates cannot change `userRole` — only admins can modify roles.
+- **Email must be unique** across users and is required on user creation. Passwords are required (minimum 6 characters) and stored only as a salted hash.
 - **`createDate` and `updateDate`** are set automatically by the server using `new Date().toISOString()`. They are never provided by the client.
 - **`sekemStatus`** on watchlist entries is always calculated server-side based on the user's academic scores vs the department's latest admission threshold. Clients cannot set or override this value.
 - **Academic scores are a separate resource.** Only users with `userRole: 'user'` can have academic scores. Admins and editors are platform operators, not students, so they have no scores. One scores entry per user is allowed.
@@ -74,8 +77,10 @@ MyApp/
 ├── middleware/
 │   ├── logger.js                     # Logs every request globally
 │   ├── authorize.js                  # Role-based access control
+│   ├── authorizeSelfOrRoles.js       # Allows self-update or specified roles
 │   └── validate/                     # Modular validation middleware
 │       ├── common.js                 # Shared validators (validateId, failure, score helpers)
+│       ├── validateLogin.js
 │       ├── validateUser.js
 │       ├── validateUniversity.js
 │       ├── validateDepartment.js
@@ -83,7 +88,8 @@ MyApp/
 │       ├── validateAcademicScores.js
 │       └── validateWatchlist.js
 ├── utils/
-│   └── sekemCalculator.js            # Sekem score calculation and status derivation
+│   ├── sekemCalculator.js            # Sekem score calculation and status derivation
+│   └── passwordHasher.js             # scrypt-based password hashing
 ├── models/                           # In-memory mock data
 │   ├── usersData.js
 │   ├── universitiesData.js
@@ -92,6 +98,7 @@ MyApp/
 │   ├── academicScoresData.js
 │   └── userWatchlistData.js
 ├── controllers/                      # Business logic (CRUD)
+│   ├── authController.js
 │   ├── usersController.js
 │   ├── universitiesController.js
 │   ├── departmentsController.js
@@ -99,6 +106,7 @@ MyApp/
 │   ├── academicScoresController.js
 │   └── userWatchlistController.js
 ├── routes/                           # Express Router definitions
+│   ├── authRoute.js
 │   ├── usersRoute.js
 │   ├── universitiesRoute.js
 │   ├── departmentsRoute.js
@@ -228,6 +236,59 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 ## API Reference
 
+### Authentication — `/login`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| POST | /login | public | Authenticate with email and password |
+
+**POST body:**
+```json
+{
+  "email": "dana@unipathway.com",
+  "password": "dana1234"
+}
+```
+
+**Success response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Login successful.",
+    "user": {
+      "userId": 5,
+      "firstName": "Dana",
+      "lastName": "Cohen",
+      "email": "dana@unipathway.com",
+      "userRole": "user",
+      "createDate": "2024-03-05T14:20:00.000Z",
+      "updateDate": "2024-03-05T14:20:00.000Z"
+    }
+  },
+  "error": null
+}
+```
+
+> The returned user object never includes `passwordHash` or `passwordSalt`.
+
+**Error response (401 — wrong email or password):**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Invalid email or password.",
+    "details": {}
+  }
+}
+```
+
+> The same generic message is returned whether the email is unknown or the password is wrong, to avoid revealing which emails are registered.
+
+---
+
 ### Users — `/users`
 
 | Method | Path | Role | Query Params | Description |
@@ -243,11 +304,13 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 {
   "firstName": "string",
   "lastName": "string",
-  "userRole": "admin | editor | user"
+  "userRole": "admin | editor | user",
+  "email": "user@example.com",
+  "password": "string (min 6 chars)"
 }
 ```
 
-> User records contain only identity information. Academic scores live in `/academic-scores`.
+> User records contain identity and login credentials. Academic scores live in `/academic-scores`. The `email` must be unique. The `password` is hashed before storage and never returned. `userRole` accepts `manager` as an alias for `editor`.
 
 **Example error response (missing fields):**
 ```json

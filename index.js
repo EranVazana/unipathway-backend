@@ -1,5 +1,6 @@
 const express = require('express');
 const loggerMiddleware = require('./middleware/logger');
+const authRouter = require('./routes/authRoute');
 const usersRouter = require('./routes/usersRoute');
 const departmentsRouter = require('./routes/departmentsRoute');
 const universitiesRouter = require('./routes/universitiesRoute');
@@ -13,6 +14,7 @@ const PORT = 3000;
 app.use(express.json());
 app.use(loggerMiddleware);
 
+app.use('/', authRouter);
 app.use('/users', usersRouter);
 app.use('/departments', departmentsRouter);
 app.use('/universities', universitiesRouter);

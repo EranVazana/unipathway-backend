@@ -1,4 +1,5 @@
 const { users, getNextId } = require('../models/usersData');
+const { hashPassword } = require('../utils/passwordHasher');
 
 const success = (data) => ({ success: true, data, error: null });
 const failure = (code, message, details = {}) => ({
@@ -7,8 +8,14 @@ const failure = (code, message, details = {}) => ({
   error: { code, message, details }
 });
 
+// Strips sensitive fields before returning a user
+function publicUser(user) {
+  const { passwordHash, passwordSalt, ...safe } = user;
+  return safe;
+}
+
 function getAllUsers(req, res) {
-  res.status(200).json(success(users));
+  res.status(200).json(success(users.map(publicUser)));
 }
 
 function getUserById(req, res) {
@@ -16,16 +23,21 @@ function getUserById(req, res) {
   if (!user) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
-  res.status(200).json(success(user));
+  res.status(200).json(success(publicUser(user)));
 }
 
 function createUser(req, res) {
-  const { firstName, lastName, userRole } = req.body;
+  const { firstName, lastName, userRole, email, password } = req.body;
   const now = new Date().toISOString();
+  const { salt, hash } = hashPassword(password);
+
   const newUser = {
     userId: getNextId(),
     firstName,
     lastName,
+    email,
+    passwordSalt: salt,
+    passwordHash: hash,
     createDate: now,
     updateDate: now,
     userRole
@@ -40,7 +52,7 @@ function updateUser(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
 
-  const { firstName, lastName, userRole } = req.body;
+  const { firstName, lastName, userRole, email, password } = req.body;
 
   // Self-updating users cannot change their own role
   if (req.isSelf && userRole !== user.userRole) {
@@ -54,6 +66,13 @@ function updateUser(req, res) {
   user.firstName = firstName;
   user.lastName = lastName;
   user.userRole = userRole;
+  user.email = email;
+
+  // Re-hash the password on update
+  const { salt, hash } = hashPassword(password);
+  user.passwordSalt = salt;
+  user.passwordHash = hash;
+
   user.updateDate = new Date().toISOString();
   res.status(200).json(success({ userId: user.userId }));
 }
