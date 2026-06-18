@@ -417,11 +417,12 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
   "name": "string",
   "location": "string",
   "logoUrl": "string",
-  "websiteUrl": "string"
+  "websiteUrl": "string",
+  "description": "string"
 }
 ```
 
-> `logoUrl` and `websiteUrl` are optional.
+> `logoUrl`, `websiteUrl`, and `description` are optional.
 
 **Example error response (not found):**
 ```json
@@ -454,11 +455,12 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
   "universityId": 1,
   "majorName": "string",
   "degreeType": "B.Sc | B.A | LL.B",
-  "faculty": "string"
+  "faculty": "string",
+  "description": "string"
 }
 ```
 
-> Admission requirements (Sekem type, weights, thresholds) are stored separately in `/admission-thresholds`.
+> `description` is optional. Admission requirements (Sekem type, weights, thresholds) are stored separately in `/admission-thresholds`.
 
 **Example error response (forbidden):**
 ```json
@@ -658,4 +660,4 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 - IDs are auto-incremented integers. Data resets on server restart (in-memory only).
 - The automated test script (`docs/test.js`) requires Node.js 18+ for built-in `fetch`.
-- Last updated: 20.5.26
+- Last updated: 20.6.26

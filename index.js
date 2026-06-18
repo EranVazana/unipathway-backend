@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const loggerMiddleware = require('./middleware/logger');
 const authRouter = require('./routes/authRoute');
 const usersRouter = require('./routes/usersRoute');
@@ -13,6 +14,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(cors());
 app.use(loggerMiddleware);
 
 // All routes are served under the /api base path
@@ -49,6 +51,7 @@ app.use((err, req, res, next) => {
     }
   });
 });
+
 
 app.listen(PORT, () => {
   console.log(`UniPathway API running on http://localhost:${PORT}`);

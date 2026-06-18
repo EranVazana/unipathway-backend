@@ -6,7 +6,7 @@ const { userWatchlist } = require('../../models/userWatchlistData');
 const { academicScores } = require('../../models/academicScoresData');
 const { calculateUserSekem, deriveSekemStatus, getLatestThreshold } = require('../../utils/sekemCalculator');
 
-const VALID_INTENT_STATUSES = ['Interested', 'Applied'];
+const VALID_INTENT_STATUSES = ['Interested', 'Applied', 'Accepted', 'Rejected'];
 
 /**
  * Looks up academic scores for a user and builds a user-like object

@@ -24,13 +24,14 @@ function getUniversityById(req, res) {
 }
 
 function createUniversity(req, res) {
-  const { name, location, logoUrl, websiteUrl } = req.body;
+  const { name, location, logoUrl, websiteUrl, description } = req.body;
   const newUniversity = {
     universityId: getNextId(),
     name,
     location,
     logoUrl: logoUrl || null,
-    websiteUrl: websiteUrl || null
+    websiteUrl: websiteUrl || null,
+    description: description || null
   };
   universities.push(newUniversity);
   res.status(201).json(success({ universityId: newUniversity.universityId }));
@@ -41,11 +42,12 @@ function updateUniversity(req, res) {
   if (!university) {
     return res.status(404).json(failure('NOT_FOUND', `University with id ${req.parsedId} not found.`, { resource: 'university', id: req.parsedId }));
   }
-  const { name, location, logoUrl, websiteUrl } = req.body;
+  const { name, location, logoUrl, websiteUrl, description } = req.body;
   university.name = name;
   university.location = location;
   university.logoUrl = logoUrl ?? university.logoUrl;
   university.websiteUrl = websiteUrl ?? university.websiteUrl;
+  university.description = description ?? university.description;
   res.status(200).json(success({ universityId: university.universityId }));
 }
 

@@ -27,7 +27,7 @@ function getDepartmentById(req, res) {
 }
 
 function createDepartment(req, res) {
-  const { universityId, majorName, degreeType, faculty } = req.body;
+  const { universityId, majorName, degreeType, faculty, description } = req.body;
   const now = new Date().toISOString();
   const newDept = {
     departmentId: getNextId(),
@@ -35,6 +35,7 @@ function createDepartment(req, res) {
     majorName,
     degreeType,
     faculty,
+    description: description || null,
     createDate: now,
     updateDate: now
   };
@@ -47,11 +48,12 @@ function updateDepartment(req, res) {
   if (!dept) {
     return res.status(404).json(failure('NOT_FOUND', `Department with id ${req.parsedId} not found.`, { resource: 'department', id: req.parsedId }));
   }
-  const { universityId, majorName, degreeType, faculty } = req.body;
+  const { universityId, majorName, degreeType, faculty, description } = req.body;
   dept.universityId = universityId;
   dept.majorName = majorName;
   dept.degreeType = degreeType;
   dept.faculty = faculty;
+  dept.description = description ?? dept.description;
   dept.updateDate = new Date().toISOString();
   res.status(200).json(success({ departmentId: dept.departmentId }));
 }
