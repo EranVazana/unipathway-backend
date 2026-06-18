@@ -1,21 +1,23 @@
 const { failure } = require('./common');
-const { users } = require('../../models/usersData');
+const { settings } = require('../../models/settingsData');
+const { hashPassword } = require('../../utils/passwordHasher');
 
 const VALID_ROLES = ['admin', 'editor', 'user'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 
+// POST /api/users — full validation including credentials (creates User + UserSettings)
 function validateUser(req, res, next) {
-  const { firstName, lastName, userRole, email, password } = req.body;
+  const { firstName, lastName, userRole, username, email, password } = req.body;
 
-  if (!firstName || !lastName || !userRole || !email || !password) {
+  if (!firstName || !lastName || !userRole || !username || !email || !password) {
     return res.status(400).json(failure(
       'VALIDATION_ERROR',
-      'Missing required fields: firstName, lastName, userRole, email, password.',
-      { required: ['firstName', 'lastName', 'userRole', 'email', 'password'] }
+      'Missing required fields: firstName, lastName, userRole, username, email, password.',
+      { required: ['firstName', 'lastName', 'userRole', 'username', 'email', 'password'] }
     ));
   }
 
-  // Accept 'manager' as an alias for 'editor'
   const normalizedRole = userRole === 'manager' ? 'editor' : userRole;
   if (!VALID_ROLES.includes(normalizedRole)) {
     return res.status(400).json(failure(
@@ -26,11 +28,35 @@ function validateUser(req, res, next) {
   }
   req.body.userRole = normalizedRole;
 
+  if (!USERNAME_REGEX.test(username)) {
+    return res.status(400).json(failure(
+      'VALIDATION_ERROR',
+      'username must be 3-20 characters and contain only letters, numbers, and underscores.',
+      { field: 'username', receivedValue: username }
+    ));
+  }
+  const usernameOwner = settings.find(s => s.username && s.username.toLowerCase() === username.toLowerCase());
+  if (usernameOwner) {
+    return res.status(400).json(failure(
+      'VALIDATION_ERROR',
+      'This username is already taken.',
+      { field: 'username' }
+    ));
+  }
+
   if (!EMAIL_REGEX.test(email)) {
     return res.status(400).json(failure(
       'VALIDATION_ERROR',
       'email must be a valid email address.',
       { field: 'email', receivedValue: email }
+    ));
+  }
+  const emailOwner = settings.find(s => s.email && s.email.toLowerCase() === email.toLowerCase());
+  if (emailOwner) {
+    return res.status(400).json(failure(
+      'VALIDATION_ERROR',
+      'A user with this email already exists.',
+      { field: 'email' }
     ));
   }
 
@@ -42,17 +68,35 @@ function validateUser(req, res, next) {
     ));
   }
 
-  // Reject duplicate email (ignore the user being updated, if any)
-  const emailOwner = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-  if (emailOwner && emailOwner.userId !== req.parsedId) {
-    return res.status(400).json(failure(
-      'VALIDATION_ERROR',
-      'A user with this email already exists.',
-      { field: 'email' }
-    ));
-  }
+  // Hash now, attach to req so the controller never touches plaintext passwords
+  req.hashedCredentials = hashPassword(password);
 
   next();
 }
 
-module.exports = validateUser;
+// PUT /api/users/:id — identity fields only, no credentials here
+function validateUserUpdate(req, res, next) {
+  const { firstName, lastName, userRole } = req.body;
+
+  if (!firstName || !lastName || !userRole) {
+    return res.status(400).json(failure(
+      'VALIDATION_ERROR',
+      'Missing required fields: firstName, lastName, userRole.',
+      { required: ['firstName', 'lastName', 'userRole'] }
+    ));
+  }
+
+  const normalizedRole = userRole === 'manager' ? 'editor' : userRole;
+  if (!VALID_ROLES.includes(normalizedRole)) {
+    return res.status(400).json(failure(
+      'VALIDATION_ERROR',
+      `userRole must be one of: ${VALID_ROLES.join(', ')}.`,
+      { field: 'userRole', receivedValue: userRole, validValues: VALID_ROLES }
+    ));
+  }
+  req.body.userRole = normalizedRole;
+
+  next();
+}
+
+module.exports = { validateUser, validateUserUpdate };

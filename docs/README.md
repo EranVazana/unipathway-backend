@@ -55,6 +55,7 @@ The API base path is `/`. All resources are available directly under the root:
 - **Authorization is simulated** via the `x-user-role` request header (`admin`, `editor`, or `user`). The legacy value `manager` is accepted as an alias for `editor`. The optional `x-user-id` header identifies the current user, enabling self-update on their own user record. Token-based sessions (JWT) will replace the header simulation in Assignment 3.
 - **Self-update:** A user with `userRole: 'user'` can `PUT /users/:id` on their own record by sending `x-user-id` matching `:id`. Self-updates cannot change `userRole` — only admins can modify roles.
 - **Email must be unique** across users and is required on user creation. Passwords are required (minimum 6 characters) and stored only as a salted hash.
+- **User identity vs. Settings split:** `User` holds only immutable identity fields (`userId`, `firstName`, `lastName`, `userRole`, timestamps). Everything a user can change lives in `UserSettings` (`username`, `email`, `password`, `theme`), linked 1:1 by `userId`. `theme` accepts `light` or `dark` and defaults to `light` for new users.
 - **`createDate` and `updateDate`** are set automatically by the server using `new Date().toISOString()`. They are never provided by the client.
 - **`sekemStatus`** on watchlist entries is always calculated server-side based on the user's academic scores vs the department's latest admission threshold. Clients cannot set or override this value.
 - **Academic scores are a separate resource.** Only users with `userRole: 'user'` can have academic scores. Admins and editors are platform operators, not students, so they have no scores. One scores entry per user is allowed.
@@ -299,18 +300,28 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 | PUT | /users/:id | admin, self | — | Update user (users can self-update via `x-user-id` matching `:id`) |
 | DELETE | /users/:id | admin | — | Delete user |
 
-**POST / PUT body:**
+**POST body** (creates both the identity record and a linked settings record):
 ```json
 {
   "firstName": "string",
   "lastName": "string",
   "userRole": "admin | editor | user",
+  "username": "string (3-20 chars, letters/numbers/underscores)",
   "email": "user@example.com",
   "password": "string (min 6 chars)"
 }
 ```
 
-> User records contain identity and login credentials. Academic scores live in `/academic-scores`. The `email` must be unique. The `password` is hashed before storage and never returned. `userRole` accepts `manager` as an alias for `editor`.
+**PUT body** (identity fields only — email/password are managed via `/api/settings`):
+```json
+{
+  "firstName": "string",
+  "lastName": "string",
+  "userRole": "admin | editor | user"
+}
+```
+
+> `email` and `username` must each be unique across all users. `password` is hashed before storage and never returned by any endpoint. `userRole` accepts `manager` as an alias for `editor`.
 
 **Example error response (missing fields):**
 ```json
@@ -321,6 +332,69 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
     "code": "VALIDATION_ERROR",
     "message": "Missing required fields: firstName, lastName, userRole.",
     "details": { "required": ["firstName", "lastName", "userRole"] }
+  }
+}
+```
+
+---
+
+### Current User — `GET /api/users/me`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | /api/users/me | any (requires `x-user-id`) | Returns the logged-in user's identity + non-sensitive settings |
+
+**Example response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 5,
+    "firstName": "Dana",
+    "lastName": "Cohen",
+    "userRole": "user",
+    "createDate": "2024-03-05T14:20:00.000Z",
+    "updateDate": "2024-03-05T14:20:00.000Z",
+    "username": "danac",
+    "email": "dana@unipathway.com",
+    "theme": "dark"
+  },
+  "error": null
+}
+```
+
+> Returns 401 if `x-user-id` is missing or doesn't match an existing user.
+
+---
+
+### Settings — `/api/settings`
+
+| Method | Path | Role | Description |
+|--------|------|------|-------------|
+| GET | /api/settings | any (requires `x-user-id`) | Get the current user's settings |
+| PUT | /api/settings | any (requires `x-user-id`) | Update email, password, and/or preferences |
+
+**PUT body** (all fields optional):
+```json
+{
+  "username": "newusername",
+  "email": "newemail@unipathway.com",
+  "password": "newpassword123",
+  "theme": "light | dark"
+}
+```
+
+> Settings are identified by the `x-user-id` header, not a route param. `passwordHash` and `passwordSalt` are never returned. If no settings entry exists yet for the user, one is created with defaults on first GET or PUT.
+
+**Example error response (duplicate email):**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "A user with this email already exists.",
+    "details": { "field": "email" }
   }
 }
 ```

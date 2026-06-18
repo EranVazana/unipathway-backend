@@ -1,5 +1,5 @@
 const { users, getNextId } = require('../models/usersData');
-const { hashPassword } = require('../utils/passwordHasher');
+const { settings, getDefaultSettings } = require('../models/settingsData');
 
 const success = (data) => ({ success: true, data, error: null });
 const failure = (code, message, details = {}) => ({
@@ -8,14 +8,33 @@ const failure = (code, message, details = {}) => ({
   error: { code, message, details }
 });
 
-// Strips sensitive fields before returning a user
-function publicUser(user) {
-  const { passwordHash, passwordSalt, ...safe } = user;
-  return safe;
+function getAllUsers(req, res) {
+  res.status(200).json(success(users));
 }
 
-function getAllUsers(req, res) {
-  res.status(200).json(success(users.map(publicUser)));
+// GET /api/users/me — identifies the current user via x-user-id, returns identity + non-sensitive settings
+function getCurrentUser(req, res) {
+  const currentId = parseInt(req.headers['x-user-id']);
+  if (isNaN(currentId)) {
+    return res.status(401).json(failure(
+      'UNAUTHENTICATED',
+      'Missing or invalid x-user-id header. Please log in.',
+      {}
+    ));
+  }
+
+  const user = users.find(u => u.userId === currentId);
+  if (!user) {
+    return res.status(404).json(failure('NOT_FOUND', `User with id ${currentId} not found.`, { resource: 'user', id: currentId }));
+  }
+
+  const userSettings = settings.find(s => s.userId === currentId);
+  res.status(200).json(success({
+    ...user,
+    username: userSettings?.username || null,
+    email: userSettings?.email || null,
+    theme: userSettings?.theme || 'light'
+  }));
 }
 
 function getUserById(req, res) {
@@ -23,38 +42,46 @@ function getUserById(req, res) {
   if (!user) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
-  res.status(200).json(success(publicUser(user)));
+  res.status(200).json(success(user));
 }
 
+// POST /api/users — creates identity AND a linked settings entry (email + password required)
 function createUser(req, res) {
-  const { firstName, lastName, userRole, email, password } = req.body;
+  const { firstName, lastName, userRole } = req.body;
   const now = new Date().toISOString();
-  const { salt, hash } = hashPassword(password);
 
   const newUser = {
     userId: getNextId(),
     firstName,
     lastName,
-    email,
-    passwordSalt: salt,
-    passwordHash: hash,
     createDate: now,
     updateDate: now,
     userRole
   };
   users.push(newUser);
+
+  // req.hashedCredentials is attached by validateUser after hashing the password
+  settings.push({
+    userId: newUser.userId,
+    username: req.body.username,
+    email: req.body.email,
+    passwordSalt: req.hashedCredentials.salt,
+    passwordHash: req.hashedCredentials.hash,
+    theme: 'light'
+  });
+
   res.status(201).json(success({ userId: newUser.userId }));
 }
 
+// PUT /api/users/:id — updates identity fields only (firstName, lastName, userRole)
 function updateUser(req, res) {
   const user = users.find(u => u.userId === req.parsedId);
   if (!user) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
 
-  const { firstName, lastName, userRole, email, password } = req.body;
+  const { firstName, lastName, userRole } = req.body;
 
-  // Self-updating users cannot change their own role
   if (req.isSelf && userRole !== user.userRole) {
     return res.status(403).json(failure(
       'FORBIDDEN',
@@ -66,14 +93,8 @@ function updateUser(req, res) {
   user.firstName = firstName;
   user.lastName = lastName;
   user.userRole = userRole;
-  user.email = email;
-
-  // Re-hash the password on update
-  const { salt, hash } = hashPassword(password);
-  user.passwordSalt = salt;
-  user.passwordHash = hash;
-
   user.updateDate = new Date().toISOString();
+
   res.status(200).json(success({ userId: user.userId }));
 }
 
@@ -83,7 +104,12 @@ function deleteUser(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
   }
   users.splice(index, 1);
+
+  // Clean up the linked settings entry
+  const settingsIndex = settings.findIndex(s => s.userId === req.parsedId);
+  if (settingsIndex !== -1) settings.splice(settingsIndex, 1);
+
   res.status(200).json(success({ userId: req.parsedId }));
 }
 
-module.exports = { getAllUsers, getUserById, createUser, updateUser, deleteUser };
+module.exports = { getAllUsers, getUserById, getCurrentUser, createUser, updateUser, deleteUser };

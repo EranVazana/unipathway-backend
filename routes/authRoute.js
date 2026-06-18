@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const validateLogin = require('../middleware/validate/validateLogin');
-const { login } = require('../controllers/authController');
+const { login, logout } = require('../controllers/authController');
 
-// POST /login — public, no authorization required
+// POST /api/auth/login — public
 router.post('/login', validateLogin, login);
+
+// POST /api/auth/logout — clears client session (stateless on server)
+router.post('/logout', logout);
 
 module.exports = router;

@@ -15,7 +15,7 @@ async function request(method, path, { body, role, userId } = {}) {
   if (role)   headers['x-user-role'] = role;
   if (userId) headers['x-user-id']   = String(userId);
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${BASE_URL}/api${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined
@@ -84,21 +84,35 @@ async function testUsers() {
   r = await post('/users', { firstName: 'Tal' }, { role: 'admin' });
   assert('POST /users (missing fields) → 400', r.status, 400);
 
+  // POST - missing username specifically
+  r = await post('/users', {
+    firstName: 'NoUser', lastName: 'Name', userRole: 'user',
+    email: `nouser${Date.now()}@unipathway.com`, password: 'pass1234'
+  }, { role: 'admin' });
+  assert('POST /users (missing username) → 400', r.status, 400);
+
+  // POST - invalid username format
+  r = await post('/users', {
+    firstName: 'Bad', lastName: 'Username', userRole: 'user',
+    username: 'a', email: `baduser${Date.now()}@unipathway.com`, password: 'pass1234'
+  }, { role: 'admin' });
+  assert('POST /users (invalid username format) → 400', r.status, 400);
+
   // POST - invalid role value
   r = await post('/users', { firstName: 'X', lastName: 'Y', userRole: 'superadmin' }, { role: 'admin' });
   assert('POST /users (invalid userRole) → 400', r.status, 400);
 
   // POST - success
-  r = await post('/users', { firstName: 'Test', lastName: 'User', userRole: 'user', email: `test${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
+  r = await post('/users', { firstName: 'Test', lastName: 'User', userRole: 'user', username: `Test${Date.now()}`, email: `test${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   assert('POST /users → 201',          r.status, 201);
   const newUserId = r.data.data.userId;
 
   // PUT - editor forbidden
-  r = await put(`/users/${newUserId}`, { firstName: 'X', lastName: 'Y', userRole: 'user', email: 'x@y.com', password: 'pass1234' }, { role: 'editor' });
+  r = await put(`/users/${newUserId}`, { firstName: 'X', lastName: 'Y', userRole: 'user' }, { role: 'editor' });
   assert('PUT /users (editor role) → 403',   r.status, 403);
 
   // PUT - admin allowed
-  r = await put(`/users/${newUserId}`, { firstName: 'Updated', lastName: 'User', userRole: 'user', email: `updated${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
+  r = await put(`/users/${newUserId}`, { firstName: 'Updated', lastName: 'User', userRole: 'user' }, { role: 'admin' });
   assert('PUT /users/:id → 200',       r.status, 200);
 
   r = await get(`/users/${newUserId}`);
@@ -124,7 +138,7 @@ async function testUsers() {
   }
 
   // POST /users with userRole='manager' should normalize to 'editor'
-  r = await post('/users', { firstName: 'Mgr', lastName: 'Alias', userRole: 'manager', email: `mgr${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
+  r = await post('/users', { firstName: 'Mgr', lastName: 'Alias', userRole: 'manager', username: `Mgr${Date.now()}`, email: `mgr${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   assert('POST /users (userRole=manager normalized) → 201', r.status, 201);
   const mgrAliasId = r.data.data.userId;
   r = await get(`/users/${mgrAliasId}`);
@@ -133,12 +147,12 @@ async function testUsers() {
 
   // ─── PUT Self-Update ───
   // Create a test user, then have them update themselves
-  let createR = await post('/users', { firstName: 'Self', lastName: 'Test', userRole: 'user', email: `self${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
+  let createR = await post('/users', { firstName: 'Self', lastName: 'Test', userRole: 'user', username: `Self${Date.now()}`, email: `self${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   const selfUserId = createR.data.data.userId;
 
   // User updates their own record - should succeed
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'user', email: `selfupd${Date.now()}@unipathway.com`, password: 'pass1234' },
+    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'user' },
     { role: 'user', userId: selfUserId });
   assert('PUT self-update (matching x-user-id) → 200', r.status, 200);
 
@@ -147,25 +161,25 @@ async function testUsers() {
 
   // User tries to update someone else - should be forbidden
   r = await put(`/users/1`,
-    { firstName: 'Hacker', lastName: 'X', userRole: 'admin', email: 'h@x.com', password: 'pass1234' },
+    { firstName: 'Hacker', lastName: 'X', userRole: 'admin' },
     { role: 'user', userId: selfUserId });
   assert('PUT other user (user role) → 403',         r.status, 403);
 
   // User tries to escalate their own role - should be forbidden
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'admin', email: `selfupd2${Date.now()}@unipathway.com`, password: 'pass1234' },
+    { firstName: 'SelfUpdated', lastName: 'Test', userRole: 'admin' },
     { role: 'user', userId: selfUserId });
   assert('PUT self with role change → 403',          r.status, 403);
 
   // User with no x-user-id header - should be forbidden
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'X', lastName: 'Y', userRole: 'user', email: 'x@y.com', password: 'pass1234' },
+    { firstName: 'X', lastName: 'Y', userRole: 'user' },
     { role: 'user' });
   assert('PUT user role with no x-user-id → 403',    r.status, 403);
 
   // Admin can still PUT anyone (no x-user-id needed)
   r = await put(`/users/${selfUserId}`,
-    { firstName: 'AdminEdit', lastName: 'Test', userRole: 'user', email: `adminedit${Date.now()}@unipathway.com`, password: 'pass1234' },
+    { firstName: 'AdminEdit', lastName: 'Test', userRole: 'user' },
     { role: 'admin' });
   assert('PUT (admin, no x-user-id) → 200',          r.status, 200);
 
@@ -307,7 +321,7 @@ async function testAcademicScores() {
   assert('GET /academic-scores/999 → 404',                r.status, 404);
 
   // Create a fresh user for testing scores
-  let createRes = await post('/users', { firstName: 'Score', lastName: 'Test', userRole: 'user', email: `score${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
+  let createRes = await post('/users', { firstName: 'Score', lastName: 'Test', userRole: 'user', username: `Score${Date.now()}`, email: `score${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   const tempUserId = createRes.data.data.userId;
 
   // POST - editor forbidden
@@ -441,41 +455,130 @@ async function testAuth() {
   section('AUTHENTICATION / LOGIN');
 
   // Successful login
-  let r = await post('/login', { email: 'dana@unipathway.com', password: 'dana1234' });
+  let r = await post('/auth/login', { email: 'dana@unipathway.com', password: 'dana1234' });
   assert('POST /login (valid) → 200',                     r.status, 200);
   assert('POST /login → returns user',                    r.data.data.user.userId, 5);
   assert('POST /login → no passwordHash leaked',          r.data.data.user.passwordHash, undefined);
   assert('POST /login → no passwordSalt leaked',          r.data.data.user.passwordSalt, undefined);
 
   // Wrong password
-  r = await post('/login', { email: 'dana@unipathway.com', password: 'wrongpass' });
+  r = await post('/auth/login', { email: 'dana@unipathway.com', password: 'wrongpass' });
   assert('POST /login (wrong password) → 401',            r.status, 401);
   assert('POST /login (wrong password) → INVALID_CREDENTIALS', r.data.error.code, 'INVALID_CREDENTIALS');
 
   // Unknown email
-  r = await post('/login', { email: 'nobody@unipathway.com', password: 'whatever' });
+  r = await post('/auth/login', { email: 'nobody@unipathway.com', password: 'whatever' });
   assert('POST /login (unknown email) → 401',             r.status, 401);
 
   // Missing fields
-  r = await post('/login', { email: 'dana@unipathway.com' });
+  r = await post('/auth/login', { email: 'dana@unipathway.com' });
   assert('POST /login (missing password) → 400',          r.status, 400);
 
   // Invalid email format
-  r = await post('/login', { email: 'not-an-email', password: 'dana1234' });
+  r = await post('/auth/login', { email: 'not-an-email', password: 'dana1234' });
   assert('POST /login (bad email format) → 400',          r.status, 400);
 
   // Newly created user can log in
   const newEmail = `tester${Date.now()}@unipathway.com`;
   let createR = await post('/users', {
     firstName: 'Login', lastName: 'Tester', userRole: 'user',
-    email: newEmail, password: 'secret123'
+    username: `lg${Date.now()}`, email: newEmail, password: 'secret123'
   }, { role: 'admin' });
+  if (createR.status !== 201) {
+    console.error('DEBUG createR:', JSON.stringify(createR.data, null, 2));
+  }
+  assert('Setup: create user for login test → 201',      createR.status, 201);
   const tempId = createR.data.data.userId;
 
-  r = await post('/login', { email: newEmail, password: 'secret123' });
+  r = await post('/auth/login', { email: newEmail, password: 'secret123' });
   assert('Login with newly created user → 200',           r.status, 200);
 
   await del(`/users/${tempId}`, { role: 'admin' });
+
+  // ─── GET /users/me ───
+  r = await get('/users/me', { userId: 5 });
+  assert('GET /users/me → 200',                           r.status, 200);
+  assert('GET /users/me → correct user',                  r.data.data.userId, 5);
+  assert('GET /users/me → has theme',                     typeof r.data.data.theme, 'string');
+  assert('GET /users/me → no password leaked',            r.data.data.passwordHash, undefined);
+
+  r = await get('/users/me');
+  assert('GET /users/me (no x-user-id) → 401',            r.status, 401);
+
+  // ─── POST /auth/logout ───
+  r = await post('/auth/logout', {});
+  assert('POST /auth/logout → 200',                       r.status, 200);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+async function testSettings() {
+  section('SETTINGS');
+
+  // GET settings for a user
+  let r = await get('/settings', { userId: 5 });
+  assert('GET /settings → 200',                           r.status, 200);
+  assert('GET /settings → has username',                  typeof r.data.data.username, 'string');
+  assert('GET /settings → correct userId',                r.data.data.userId, 5);
+  assert('GET /settings → has email',                     typeof r.data.data.email, 'string');
+  assert('GET /settings → has theme',                     typeof r.data.data.theme, 'string');
+  assert('GET /settings → no password leaked',            r.data.data.passwordHash, undefined);
+
+  // GET without auth
+  r = await get('/settings');
+  assert('GET /settings (no x-user-id) → 401',            r.status, 401);
+
+  // PUT update username
+  const newUsername = `dana_${Date.now()}`;
+  r = await put('/settings', { username: newUsername }, { userId: 5 });
+  assert('PUT /settings (username) → 200',                r.status, 200);
+  assert('PUT /settings → username updated',              r.data.data.username, newUsername);
+
+  // PUT duplicate username
+  r = await put('/settings', { username: 'tals' }, { userId: 5 });
+  assert('PUT /settings (duplicate username) → 400',      r.status, 400);
+
+  // PUT invalid username format
+  r = await put('/settings', { username: 'a' }, { userId: 5 });
+  assert('PUT /settings (invalid username) → 400',        r.status, 400);
+
+  // PUT update email + password
+  const newEmail2 = `danaupdated${Date.now()}@unipathway.com`;
+  r = await put('/settings', { email: newEmail2, password: 'newpass123' }, { userId: 5 });
+  assert('PUT /settings (email+password) → 200',          r.status, 200);
+  assert('PUT /settings → email updated',                 r.data.data.email, newEmail2);
+  assert('PUT /settings → no password leaked',            r.data.data.passwordHash, undefined);
+
+  // Login with the new password to confirm the hash was actually updated
+  r = await post('/auth/login', { email: newEmail2, password: 'newpass123' });
+  assert('Login with new password after settings update → 200', r.status, 200);
+
+  // PUT duplicate email
+  r = await put('/settings', { email: 'tal@unipathway.com' }, { userId: 5 });
+  assert('PUT /settings (duplicate email) → 400',         r.status, 400);
+
+  // PUT invalid email format
+  r = await put('/settings', { email: 'not-an-email' }, { userId: 5 });
+  assert('PUT /settings (invalid email format) → 400',    r.status, 400);
+
+  // PUT update theme
+  r = await put('/settings', { theme: 'dark' }, { userId: 5 });
+  assert('PUT /settings (theme) → 200',                   r.status, 200);
+  assert('PUT /settings → theme updated',                 r.data.data.theme, 'dark');
+
+  // PUT invalid theme value
+  r = await put('/settings', { theme: 'rainbow' }, { userId: 5 });
+  assert('PUT /settings (invalid theme) → 400',           r.status, 400);
+
+  // PUT invalid password length
+  r = await put('/settings', { password: '123' }, { userId: 5 });
+  assert('PUT /settings (short password) → 400',          r.status, 400);
+
+  // Restore Dana's original credentials and theme for any later tests
+  await put('/settings', { username: 'danac', email: 'dana@unipathway.com', password: 'dana1234', theme: 'dark' }, { userId: 5 });
+
+  // PUT without auth
+  r = await put('/settings', { username: 'shouldfail' });
+  assert('PUT /settings (no x-user-id) → 401',            r.status, 401);
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -491,10 +594,13 @@ async function run() {
     await testAdmissionThresholds();
     await testAcademicScores();
     await testWatchlist();
+    await testSettings();
   } catch (err) {
     console.error('\n💥 Unexpected error during tests:', err.message);
+    console.error(err.stack);
     console.error('   Is the server running on port 3000?\n');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   console.log(results.join('\n'));
@@ -504,7 +610,11 @@ async function run() {
   if (failed > 0) console.log(`❌ Failed: ${failed}`);
   else            console.log('🎉 All tests passed!');
   console.log('─'.repeat(40));
-  process.exit(failed > 0 ? 1 : 0);
+
+  // Use exitCode instead of process.exit() so Node can clean up pending
+  // async handles (sockets, timers) naturally before the process ends.
+  // process.exit() can race with libuv handle cleanup on Windows and crash.
+  process.exitCode = failed > 0 ? 1 : 0;
 }
 
 run();
