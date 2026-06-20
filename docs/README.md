@@ -152,9 +152,9 @@ The `x-user-role` header is required on all protected routes.
 
 | Resource | Method | admin | editor | user |
 |---|---|:---:|:---:|:---:|
-| **Users** | GET | ✅ | ✅ | ✅ (self only)|
+| **Users** | GET | ✅ | ✅ (self only)| ✅ (self only)|
 | | POST | ✅ | ❌ | ❌ |
-| | PUT | ✅ | ❌ | ✅ (self only) |
+| | PUT | ✅ | ✅ (self only) | ✅ (self only) |
 | | DELETE | ✅ | ❌ | ❌ |
 | **Universities** | GET | ✅ | ✅ | ✅ |
 | | POST | ✅ | ✅ | ❌ |
@@ -176,6 +176,8 @@ The `x-user-role` header is required on all protected routes.
 | | POST | ✅ | ❌ | ✅ |
 | | PUT | ✅ | ❌ | ✅ |
 | | DELETE | ✅ | ❌ | ✅ |
+| **Settings** | GET | ✅ | ✅ (self only) | ✅ (self only)|
+| | PUT | ✅ | ✅ (self only) | ✅ |
 
 > Editors are **completely blocked** from Academic Scores and Watchlist — these contain private student data that has nothing to do with content curation.
 
@@ -371,8 +373,10 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 | Method | Path | Role | Description |
 |--------|------|------|-------------|
-| GET | /api/settings | any (requires `x-user-id`) | Get the current user's settings |
-| PUT | /api/settings | any (requires `x-user-id`) | Update email, password, and/or preferences |
+| GET | /api/settings | any (requires `x-user-id`) | Get the current user's own settings |
+| PUT | /api/settings | any (requires `x-user-id`) | Update the current user's own settings |
+| GET | /api/settings/:id | admin | Get any user's settings by user id |
+| PUT | /api/settings/:id | admin | Update any user's settings by user id |
 
 **PUT body** (all fields optional):
 ```json
@@ -660,4 +664,4 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 - IDs are auto-incremented integers. Data resets on server restart (in-memory only).
 - The automated test script (`docs/test.js`) requires Node.js 18+ for built-in `fetch`.
-- Last updated: 20.6.26
+- Last updated: 20.5.26

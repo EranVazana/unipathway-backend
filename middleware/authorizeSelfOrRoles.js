@@ -31,7 +31,7 @@ function authorizeSelfOrRoles(...allowedRoles) {
       return next();
     }
 
-    // Self-update path: user can modify their own record
+    // Self-update path: user can act on their own record
     const requesterId = parseInt(req.headers['x-user-id']);
     if (role === 'user' && !isNaN(requesterId) && requesterId === req.parsedId) {
       req.userRole = role;

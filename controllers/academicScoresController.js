@@ -29,8 +29,22 @@ function recalculateWatchlistSekem(scoresEntry) {
   return entries.length;
 }
 
+// Returns the requester's role (manager normalized to editor) and id from headers
+function requester(req) {
+  let role = req.headers['x-user-role'];
+  if (role === 'manager') role = 'editor';
+  const id = parseInt(req.headers['x-user-id']);
+  return { role, id: isNaN(id) ? null : id };
+}
+
 function getAllAcademicScores(req, res) {
+  const { role, id } = requester(req);
   let result = [...academicScores];
+
+  // Users may only see their own scores; admins see everything
+  if (role === 'user') {
+    result = result.filter(s => s.userId === id);
+  }
   if (req.query.userId) {
     result = result.filter(s => s.userId === parseInt(req.query.userId));
   }
@@ -42,11 +56,25 @@ function getAcademicScoresById(req, res) {
   if (!entry) {
     return res.status(404).json(failure('NOT_FOUND', `Academic scores entry with id ${req.parsedId} not found.`, { resource: 'academicScores', id: req.parsedId }));
   }
+
+  // Users may only see their own scores
+  const { role, id } = requester(req);
+  if (role === 'user' && entry.userId !== id) {
+    return res.status(403).json(failure('FORBIDDEN', 'You may only view your own academic scores.', { yourId: id }));
+  }
+
   res.status(200).json(success(entry));
 }
 
 function createAcademicScores(req, res) {
   const { userId, psychometricScores, bagrutScores } = req.body;
+
+  // Users may only create scores for themselves
+  const { role, id } = requester(req);
+  if (role === 'user' && userId !== id) {
+    return res.status(403).json(failure('FORBIDDEN', 'You may only create academic scores for yourself.', { yourId: id }));
+  }
+
   const now = new Date().toISOString();
   const newEntry = {
     academicScoresId: getNextId(),
@@ -70,6 +98,13 @@ function updateAcademicScores(req, res) {
   if (!entry) {
     return res.status(404).json(failure('NOT_FOUND', `Academic scores entry with id ${req.parsedId} not found.`, { resource: 'academicScores', id: req.parsedId }));
   }
+
+  // Users may only update their own scores
+  const { role, id } = requester(req);
+  if (role === 'user' && entry.userId !== id) {
+    return res.status(403).json(failure('FORBIDDEN', 'You may only update your own academic scores.', { yourId: id }));
+  }
+
   const { psychometricScores, bagrutScores } = req.body;
   entry.psychometricScores = psychometricScores ?? entry.psychometricScores;
   entry.bagrutScores = bagrutScores ?? entry.bagrutScores;
@@ -87,6 +122,13 @@ function deleteAcademicScores(req, res) {
   if (index === -1) {
     return res.status(404).json(failure('NOT_FOUND', `Academic scores entry with id ${req.parsedId} not found.`, { resource: 'academicScores', id: req.parsedId }));
   }
+
+  // Users may only delete their own scores
+  const { role, id } = requester(req);
+  if (role === 'user' && academicScores[index].userId !== id) {
+    return res.status(403).json(failure('FORBIDDEN', 'You may only delete your own academic scores.', { yourId: id }));
+  }
+
   const removed = academicScores.splice(index, 1)[0];
 
   // After deletion, watchlist entries get 'no-data' and null sekem

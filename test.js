@@ -61,15 +61,42 @@ const samplePsychometric = { verbal: 110, quantitative: 120, english: 115 };
 async function testUsers() {
   section('USERS');
 
-  let r = await get('/users');
-  assert('GET /users → 200',           r.status, 200);
+  // GET / — admin only
+  let r = await get('/users', { role: 'admin' });
+  assert('GET /users (admin) → 200',           r.status, 200);
   assert('GET /users → returns array', Array.isArray(r.data.data), true);
 
-  r = await get('/users/1');
-  assert('GET /users/1 → 200',         r.status, 200);
+  // editor cannot list users
+  r = await get('/users', { role: 'editor' });
+  assert('GET /users (editor) → 403',          r.status, 403);
+
+  // user cannot list all users
+  r = await get('/users', { role: 'user', userId: 5 });
+  assert('GET /users (user) → 403',            r.status, 403);
+
+  // GET /:id — admin can read anyone
+  r = await get('/users/1', { role: 'admin' });
+  assert('GET /users/1 (admin) → 200',         r.status, 200);
   assert('GET /users/1 → correct id',  r.data.data.userId, 1);
 
-  r = await get('/users/999');
+  // user can read their OWN record
+  r = await get('/users/5', { role: 'user', userId: 5 });
+  assert('GET own user (user) → 200',          r.status, 200);
+
+  // user cannot read another user's record
+  r = await get('/users/1', { role: 'user', userId: 5 });
+  assert('GET other user (user) → 403',        r.status, 403);
+
+  // editor can read their OWN record (Yael = userId 3)
+  r = await get('/users/3', { role: 'editor', userId: 3 });
+  assert('GET own user (editor) → 200',        r.status, 200);
+  assert('GET own user (editor) → correct id', r.data.data.userId, 3);
+
+  // editor cannot read ANOTHER user's record
+  r = await get('/users/1', { role: 'editor', userId: 3 });
+  assert('GET other user (editor) → 403',      r.status, 403);
+
+  r = await get('/users/999', { role: 'admin' });
   assert('GET /users/999 → 404',       r.status, 404);
 
   // POST - editor no longer allowed
@@ -107,15 +134,15 @@ async function testUsers() {
   assert('POST /users → 201',          r.status, 201);
   const newUserId = r.data.data.userId;
 
-  // PUT - editor forbidden
-  r = await put(`/users/${newUserId}`, { firstName: 'X', lastName: 'Y', userRole: 'user' }, { role: 'editor' });
-  assert('PUT /users (editor role) → 403',   r.status, 403);
+  // PUT - editor cannot update ANOTHER user's record
+  r = await put(`/users/${newUserId}`, { firstName: 'X', lastName: 'Y', userRole: 'user' }, { role: 'editor', userId: 3 });
+  assert('PUT other user (editor) → 403',   r.status, 403);
 
   // PUT - admin allowed
   r = await put(`/users/${newUserId}`, { firstName: 'Updated', lastName: 'User', userRole: 'user' }, { role: 'admin' });
   assert('PUT /users/:id → 200',       r.status, 200);
 
-  r = await get(`/users/${newUserId}`);
+  r = await get(`/users/${newUserId}`, { role: 'admin' });
   assert('GET after PUT → firstName updated', r.data.data.firstName, 'Updated');
 
   // DELETE - editor forbidden
@@ -126,7 +153,7 @@ async function testUsers() {
   r = await del(`/users/${newUserId}`, { role: 'admin' });
   assert('DELETE /users/:id → 200',    r.status, 200);
 
-  r = await get(`/users/${newUserId}`);
+  r = await get(`/users/${newUserId}`, { role: 'admin' });
   assert('GET after DELETE → 404',     r.status, 404);
 
   // ─── manager-as-alias for editor ───
@@ -141,7 +168,7 @@ async function testUsers() {
   r = await post('/users', { firstName: 'Mgr', lastName: 'Alias', userRole: 'manager', username: `Mgr${Date.now()}`, email: `mgr${Date.now()}@unipathway.com`, password: 'pass1234' }, { role: 'admin' });
   assert('POST /users (userRole=manager normalized) → 201', r.status, 201);
   const mgrAliasId = r.data.data.userId;
-  r = await get(`/users/${mgrAliasId}`);
+  r = await get(`/users/${mgrAliasId}`, { role: 'admin' });
   assert('Manager normalized to editor in storage',  r.data.data.userRole, 'editor');
   await del(`/users/${mgrAliasId}`, { role: 'admin' });
 
@@ -156,7 +183,7 @@ async function testUsers() {
     { role: 'user', userId: selfUserId });
   assert('PUT self-update (matching x-user-id) → 200', r.status, 200);
 
-  r = await get(`/users/${selfUserId}`);
+  r = await get(`/users/${selfUserId}`, { role: 'admin' });
   assert('Self-update persisted firstName',          r.data.data.firstName, 'SelfUpdated');
 
   // User tries to update someone else - should be forbidden
@@ -176,6 +203,18 @@ async function testUsers() {
     { firstName: 'X', lastName: 'Y', userRole: 'user' },
     { role: 'user' });
   assert('PUT user role with no x-user-id → 403',    r.status, 403);
+
+  // Editor updates their OWN record (Yael = userId 3) — allowed
+  r = await put(`/users/3`,
+    { firstName: 'Yael', lastName: 'Levi', userRole: 'editor' },
+    { role: 'editor', userId: 3 });
+  assert('PUT self-update (editor) → 200',           r.status, 200);
+
+  // Editor tries to escalate their own role — forbidden
+  r = await put(`/users/3`,
+    { firstName: 'Yael', lastName: 'Levi', userRole: 'admin' },
+    { role: 'editor', userId: 3 });
+  assert('PUT self role change (editor) → 403',      r.status, 403);
 
   // Admin can still PUT anyone (no x-user-id needed)
   r = await put(`/users/${selfUserId}`,
@@ -317,6 +356,18 @@ async function testAcademicScores() {
   r = await get('/academic-scores?userId=5', { role: 'admin' });
   assert('GET ?userId=5 → filtered',                      r.data.data.every(s => s.userId === 5) && r.data.data.length > 0, true);
 
+  // user sees ONLY their own scores (Dana = userId 5)
+  r = await get('/academic-scores', { role: 'user', userId: 5 });
+  assert('GET /academic-scores (user) → only own',        r.data.data.every(s => s.userId === 5), true);
+
+  // user cannot read another user's scores entry by id (entry 2 belongs to Tal=6)
+  r = await get('/academic-scores/2', { role: 'user', userId: 5 });
+  assert('GET other user scores by id (user) → 403',      r.status, 403);
+
+  // user CAN read their own scores entry by id (entry 1 belongs to Dana=5)
+  r = await get('/academic-scores/1', { role: 'user', userId: 5 });
+  assert('GET own scores by id (user) → 200',             r.status, 200);
+
   r = await get('/academic-scores/999', { role: 'admin' });
   assert('GET /academic-scores/999 → 404',                r.status, 404);
 
@@ -327,6 +378,10 @@ async function testAcademicScores() {
   // POST - editor forbidden
   r = await post('/academic-scores', { userId: tempUserId, psychometricScores: samplePsychometric, bagrutScores: sampleBagrut }, { role: 'editor' });
   assert('POST /academic-scores (editor) → 403',          r.status, 403);
+
+  // user cannot create scores for SOMEONE ELSE (Dana=5 trying to create for tempUser)
+  r = await post('/academic-scores', { userId: tempUserId, psychometricScores: samplePsychometric, bagrutScores: sampleBagrut }, { role: 'user', userId: 5 });
+  assert('POST /academic-scores (user for other) → 403',  r.status, 403);
 
   // POST - missing userId
   r = await post('/academic-scores', { psychometricScores: samplePsychometric, bagrutScores: sampleBagrut }, { role: 'admin' });
@@ -391,61 +446,86 @@ async function testWatchlist() {
   r = await get('/watchlist', { role: 'admin' });
   assert('GET /watchlist (admin) → 200',                  r.status, 200);
 
-  r = await get('/watchlist?userId=5', { role: 'user' });
-  assert('GET ?userId=5 (user) → filtered',               r.data.data.every(w => w.userId === 5), true);
+  // user sees ONLY their own watchlist (Dana = userId 5)
+  r = await get('/watchlist', { role: 'user', userId: 5 });
+  assert('GET /watchlist (user) → only own',              r.data.data.every(w => w.userId === 5), true);
+
+  // user cannot read another user's watchlist entry by id (entry 4 belongs to Tal=6)
+  r = await get('/watchlist/4', { role: 'user', userId: 5 });
+  assert('GET other user watchlist by id (user) → 403',   r.status, 403);
+
+  // user CAN read their own watchlist entry by id (entry 1 belongs to Dana=5)
+  r = await get('/watchlist/1', { role: 'user', userId: 5 });
+  assert('GET own watchlist by id (user) → 200',          r.status, 200);
+
+  r = await get('/watchlist?userId=5', { role: 'admin' });
+  assert('GET ?userId=5 (admin) → filtered',              r.data.data.every(w => w.userId === 5), true);
 
   r = await get('/watchlist?sekemStatus=passed-required-acceptance-score', { role: 'admin' });
   assert('GET ?sekemStatus=passed → filtered',            r.data.data.every(w => w.sekemStatus === 'passed-required-acceptance-score'), true);
 
-  // POST - invalid status values
-  r = await post('/watchlist', { userId: 5, departmentId: 8, status: 'Maybe' }, { role: 'user' });
+  // user cannot create a watchlist entry for SOMEONE ELSE (Dana=5 creating for Tal=6)
+  r = await post('/watchlist', { userId: 6, departmentId: 3 }, { role: 'user', userId: 5 });
+  assert('POST /watchlist (user for other) → 403',        r.status, 403);
+
+  // POST - invalid status values (Dana acting on her own behalf)
+  r = await post('/watchlist', { userId: 5, departmentId: 8, status: 'Maybe' }, { role: 'user', userId: 5 });
   assert('POST (invalid status) → 400',                   r.status, 400);
 
-  r = await post('/watchlist', { userId: 5, departmentId: 8, status: 'passed-required-acceptance-score' }, { role: 'user' });
+  r = await post('/watchlist', { userId: 5, departmentId: 8, status: 'passed-required-acceptance-score' }, { role: 'user', userId: 5 });
   assert('POST (sekem status as status) → 400',           r.status, 400);
 
-  // POST - cannot watchlist for an admin/editor user
+  // POST - cannot watchlist for an admin/editor user (admin performing the call)
   r = await post('/watchlist', { userId: 1, departmentId: 3 }, { role: 'admin' });
   assert('POST (watchlist for admin user) → 400',         r.status, 400);
 
   r = await post('/watchlist', { userId: 4, departmentId: 3 }, { role: 'admin' });
   assert('POST (watchlist for editor user) → 400',        r.status, 400);
 
-  // POST - user/dept not found
-  r = await post('/watchlist', { userId: 999, departmentId: 1 }, { role: 'user' });
+  // POST - user/dept not found (admin can target any user, so these reach the validators)
+  r = await post('/watchlist', { userId: 999, departmentId: 1 }, { role: 'admin' });
   assert('POST (user not found) → 404',                   r.status, 404);
 
-  r = await post('/watchlist', { userId: 5, departmentId: 999 }, { role: 'user' });
+  r = await post('/watchlist', { userId: 5, departmentId: 999 }, { role: 'user', userId: 5 });
   assert('POST (dept not found) → 404',                   r.status, 404);
 
-  // POST - duplicate
-  r = await post('/watchlist', { userId: 5, departmentId: 6 }, { role: 'user' });
+  // POST - duplicate (Dana already watches dept 6)
+  r = await post('/watchlist', { userId: 5, departmentId: 6 }, { role: 'user', userId: 5 });
   assert('POST (duplicate) → 400',                        r.status, 400);
 
-  // POST - success with default status (Tal hasn't watched dept 3 yet)
-  r = await post('/watchlist', { userId: 6, departmentId: 3 }, { role: 'user' });
+  // POST - success with default status (Dana hasn't watched dept 8 yet)
+  r = await post('/watchlist', { userId: 5, departmentId: 8 }, { role: 'user', userId: 5 });
   assert('POST /watchlist (default status) → 201',        r.status, 201);
   assert('POST → status defaults to Interested',          r.data.data.status, 'Interested');
   assert('POST → sekemStatus is server-calculated',
     ['passed-required-acceptance-score','below-required-acceptance-score','no-data'].includes(r.data.data.sekemStatus), true);
   const newEntryId = r.data.data.watchlistId;
 
-  // PUT - update status
-  r = await put(`/watchlist/${newEntryId}`, { status: 'Applied' }, { role: 'user' });
+  // PUT - update status (Dana editing her own entry)
+  r = await put(`/watchlist/${newEntryId}`, { status: 'Applied' }, { role: 'user', userId: 5 });
   assert('PUT /watchlist/:id → 200',                      r.status, 200);
 
   r = await get(`/watchlist/${newEntryId}`, { role: 'admin' });
   assert('GET after PUT → status updated to Applied',     r.data.data.status, 'Applied');
 
+  // PUT - a different user cannot edit Dana's entry (Tal=6 trying)
+  r = await put(`/watchlist/${newEntryId}`, { status: 'Interested' }, { role: 'user', userId: 6 });
+  assert('PUT other user watchlist (user) → 403',         r.status, 403);
+
   // PUT - sekem status as status rejected
-  r = await put(`/watchlist/${newEntryId}`, { status: 'passed-required-acceptance-score' }, { role: 'user' });
+  r = await put(`/watchlist/${newEntryId}`, { status: 'passed-required-acceptance-score' }, { role: 'user', userId: 5 });
   assert('PUT (sekem status as status) → 400',            r.status, 400);
 
   // DELETE - editor forbidden
   r = await del(`/watchlist/${newEntryId}`, { role: 'editor' });
   assert('DELETE /watchlist (editor) → 403',              r.status, 403);
 
-  r = await del(`/watchlist/${newEntryId}`, { role: 'user' });
+  // DELETE - a different user cannot delete Dana's entry (Tal=6 trying)
+  r = await del(`/watchlist/${newEntryId}`, { role: 'user', userId: 6 });
+  assert('DELETE other user watchlist (user) → 403',      r.status, 403);
+
+  // DELETE - Dana deletes her own entry
+  r = await del(`/watchlist/${newEntryId}`, { role: 'user', userId: 5 });
   assert('DELETE /watchlist/:id → 200',                   r.status, 200);
 }
 
@@ -496,7 +576,7 @@ async function testAuth() {
   await del(`/users/${tempId}`, { role: 'admin' });
 
   // ─── GET /users/me ───
-  r = await get('/users/me', { userId: 5 });
+  r = await get('/users/me', { role: 'user', userId: 5 });
   assert('GET /users/me → 200',                           r.status, 200);
   assert('GET /users/me → correct user',                  r.data.data.userId, 5);
   assert('GET /users/me → has theme',                     typeof r.data.data.theme, 'string');
@@ -515,7 +595,7 @@ async function testSettings() {
   section('SETTINGS');
 
   // GET settings for a user
-  let r = await get('/settings', { userId: 5 });
+  let r = await get('/settings', { role: 'user', userId: 5 });
   assert('GET /settings → 200',                           r.status, 200);
   assert('GET /settings → has username',                  typeof r.data.data.username, 'string');
   assert('GET /settings → correct userId',                r.data.data.userId, 5);
@@ -523,27 +603,27 @@ async function testSettings() {
   assert('GET /settings → has theme',                     typeof r.data.data.theme, 'string');
   assert('GET /settings → no password leaked',            r.data.data.passwordHash, undefined);
 
-  // GET without auth
-  r = await get('/settings');
+  // GET with a role but no x-user-id → controller returns 401
+  r = await get('/settings', { role: 'user' });
   assert('GET /settings (no x-user-id) → 401',            r.status, 401);
 
   // PUT update username
   const newUsername = `dana_${Date.now()}`;
-  r = await put('/settings', { username: newUsername }, { userId: 5 });
+  r = await put('/settings', { username: newUsername }, { role: 'user', userId: 5 });
   assert('PUT /settings (username) → 200',                r.status, 200);
   assert('PUT /settings → username updated',              r.data.data.username, newUsername);
 
   // PUT duplicate username
-  r = await put('/settings', { username: 'tals' }, { userId: 5 });
+  r = await put('/settings', { username: 'tals' }, { role: 'user', userId: 5 });
   assert('PUT /settings (duplicate username) → 400',      r.status, 400);
 
   // PUT invalid username format
-  r = await put('/settings', { username: 'a' }, { userId: 5 });
+  r = await put('/settings', { username: 'a' }, { role: 'user', userId: 5 });
   assert('PUT /settings (invalid username) → 400',        r.status, 400);
 
   // PUT update email + password
   const newEmail2 = `danaupdated${Date.now()}@unipathway.com`;
-  r = await put('/settings', { email: newEmail2, password: 'newpass123' }, { userId: 5 });
+  r = await put('/settings', { email: newEmail2, password: 'newpass123' }, { role: 'user', userId: 5 });
   assert('PUT /settings (email+password) → 200',          r.status, 200);
   assert('PUT /settings → email updated',                 r.data.data.email, newEmail2);
   assert('PUT /settings → no password leaked',            r.data.data.passwordHash, undefined);
@@ -553,31 +633,65 @@ async function testSettings() {
   assert('Login with new password after settings update → 200', r.status, 200);
 
   // PUT duplicate email
-  r = await put('/settings', { email: 'tal@unipathway.com' }, { userId: 5 });
+  r = await put('/settings', { email: 'tal@unipathway.com' }, { role: 'user', userId: 5 });
   assert('PUT /settings (duplicate email) → 400',         r.status, 400);
 
   // PUT invalid email format
-  r = await put('/settings', { email: 'not-an-email' }, { userId: 5 });
+  r = await put('/settings', { email: 'not-an-email' }, { role: 'user', userId: 5 });
   assert('PUT /settings (invalid email format) → 400',    r.status, 400);
 
   // PUT update theme
-  r = await put('/settings', { theme: 'dark' }, { userId: 5 });
+  r = await put('/settings', { theme: 'dark' }, { role: 'user', userId: 5 });
   assert('PUT /settings (theme) → 200',                   r.status, 200);
   assert('PUT /settings → theme updated',                 r.data.data.theme, 'dark');
 
   // PUT invalid theme value
-  r = await put('/settings', { theme: 'rainbow' }, { userId: 5 });
+  r = await put('/settings', { theme: 'rainbow' }, { role: 'user', userId: 5 });
   assert('PUT /settings (invalid theme) → 400',           r.status, 400);
 
   // PUT invalid password length
-  r = await put('/settings', { password: '123' }, { userId: 5 });
+  r = await put('/settings', { password: '123' }, { role: 'user', userId: 5 });
   assert('PUT /settings (short password) → 400',          r.status, 400);
 
   // Restore Dana's original credentials and theme for any later tests
-  await put('/settings', { username: 'danac', email: 'dana@unipathway.com', password: 'dana1234', theme: 'dark' }, { userId: 5 });
+  await put('/settings', { username: 'danac', email: 'dana@unipathway.com', password: 'dana1234', theme: 'dark' }, { role: 'user', userId: 5 });
 
-  // PUT without auth
-  r = await put('/settings', { username: 'shouldfail' });
+  // ─── Editor can manage their OWN settings (Yael = userId 3) ───
+  r = await get('/settings', { role: 'editor', userId: 3 });
+  assert('GET /settings (editor own) → 200',              r.status, 200);
+  assert('GET /settings (editor) → correct userId',       r.data.data.userId, 3);
+
+  r = await put('/settings', { theme: 'light' }, { role: 'editor', userId: 3 });
+  assert('PUT /settings (editor own) → 200',              r.status, 200);
+
+  // ─── Admin can view/edit ANY user's settings via /:id ───
+  r = await get('/settings/5', { role: 'admin' });
+  assert('GET /settings/:id (admin) → 200',               r.status, 200);
+  assert('GET /settings/:id (admin) → correct user',      r.data.data.userId, 5);
+  assert('GET /settings/:id (admin) → no password leaked', r.data.data.passwordHash, undefined);
+
+  r = await put('/settings/5', { theme: 'light' }, { role: 'admin' });
+  assert('PUT /settings/:id (admin) → 200',               r.status, 200);
+  assert('PUT /settings/:id (admin) → theme updated',     r.data.data.theme, 'light');
+  // restore
+  await put('/settings/5', { theme: 'dark' }, { role: 'admin' });
+
+  // GET /settings/:id for a non-existent user → 404
+  r = await get('/settings/999', { role: 'admin' });
+  assert('GET /settings/999 (admin) → 404',               r.status, 404);
+
+  // ─── Non-admins cannot use the /:id route ───
+  r = await get('/settings/6', { role: 'user', userId: 5 });
+  assert('GET /settings/:id (user) → 403',                r.status, 403);
+
+  r = await put('/settings/6', { theme: 'light' }, { role: 'user', userId: 5 });
+  assert('PUT /settings/:id (user) → 403',                r.status, 403);
+
+  r = await get('/settings/6', { role: 'editor', userId: 3 });
+  assert('GET /settings/:id (editor) → 403',              r.status, 403);
+
+  // PUT with a role but no x-user-id → controller returns 401
+  r = await put('/settings', { username: 'shouldfail' }, { role: 'user' });
   assert('PUT /settings (no x-user-id) → 401',            r.status, 401);
 }
 

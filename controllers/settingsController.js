@@ -20,39 +20,26 @@ function publicSettings(entry) {
   return safe;
 }
 
-// GET /api/settings — returns the current user's settings (creates defaults if none)
-function getSettings(req, res) {
-  const userId = currentUserId(req);
-  if (userId === null) {
-    return res.status(401).json(failure('UNAUTHENTICATED', 'Missing or invalid x-user-id header. Please log in.', {}));
-  }
-
+// Core read — resolves/creates the settings entry for a given userId
+function readSettingsFor(userId, res) {
   const user = users.find(u => u.userId === userId);
   if (!user) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${userId} not found.`, { resource: 'user', id: userId }));
   }
-
   let entry = settings.find(s => s.userId === userId);
   if (!entry) {
     entry = getDefaultSettings(userId);
     settings.push(entry);
   }
-
-  res.status(200).json(success(publicSettings(entry)));
+  return res.status(200).json(success(publicSettings(entry)));
 }
 
-// PUT /api/settings — updates the current user's settings (username, email, password, theme)
-function updateSettings(req, res) {
-  const userId = currentUserId(req);
-  if (userId === null) {
-    return res.status(401).json(failure('UNAUTHENTICATED', 'Missing or invalid x-user-id header. Please log in.', {}));
-  }
-
+// Core update — applies changes to the settings entry for a given userId
+function updateSettingsFor(userId, req, res) {
   const user = users.find(u => u.userId === userId);
   if (!user) {
     return res.status(404).json(failure('NOT_FOUND', `User with id ${userId} not found.`, { resource: 'user', id: userId }));
   }
-
   let entry = settings.find(s => s.userId === userId);
   if (!entry) {
     entry = getDefaultSettings(userId);
@@ -60,7 +47,6 @@ function updateSettings(req, res) {
   }
 
   const { username, email, password, theme } = req.body;
-
   if (username !== undefined) entry.username = username;
   if (email !== undefined) entry.email = email;
   if (password !== undefined) {
@@ -70,7 +56,35 @@ function updateSettings(req, res) {
   }
   if (theme !== undefined) entry.theme = theme;
 
-  res.status(200).json(success(publicSettings(entry)));
+  return res.status(200).json(success(publicSettings(entry)));
 }
 
-module.exports = { getSettings, updateSettings };
+// GET /api/settings — the CURRENT user's own settings (any logged-in role)
+function getSettings(req, res) {
+  const userId = currentUserId(req);
+  if (userId === null) {
+    return res.status(401).json(failure('UNAUTHENTICATED', 'Missing or invalid x-user-id header. Please log in.', {}));
+  }
+  return readSettingsFor(userId, res);
+}
+
+// PUT /api/settings — update the CURRENT user's own settings
+function updateSettings(req, res) {
+  const userId = currentUserId(req);
+  if (userId === null) {
+    return res.status(401).json(failure('UNAUTHENTICATED', 'Missing or invalid x-user-id header. Please log in.', {}));
+  }
+  return updateSettingsFor(userId, req, res);
+}
+
+// GET /api/settings/:userId — admin only, any user's settings
+function getSettingsById(req, res) {
+  return readSettingsFor(req.parsedId, res);
+}
+
+// PUT /api/settings/:userId — admin only, update any user's settings
+function updateSettingsById(req, res) {
+  return updateSettingsFor(req.parsedId, req, res);
+}
+
+module.exports = { getSettings, updateSettings, getSettingsById, updateSettingsById };
