@@ -4,6 +4,8 @@
  * Make sure the server is running on http://localhost:3000 first
  */
 
+console.clear();
+
 const BASE_URL = 'http://localhost:3000';
 
 let passed = 0;
