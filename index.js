@@ -13,6 +13,8 @@ const settingsRouter = require('./routes/settingsRoute');
 const app = express();
 const PORT = 3000;
 
+console.clear();
+
 app.use(express.json());
 app.use(cors());
 app.use(loggerMiddleware);

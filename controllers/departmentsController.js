@@ -35,7 +35,7 @@ function createDepartment(req, res) {
     majorName,
     degreeType,
     faculty,
-    description: description || null,
+    description: description || '',
     createDate: now,
     updateDate: now
   };
@@ -53,7 +53,7 @@ function updateDepartment(req, res) {
   dept.majorName = majorName;
   dept.degreeType = degreeType;
   dept.faculty = faculty;
-  dept.description = description ?? dept.description;
+  if (description !== undefined) dept.description = description;
   dept.updateDate = new Date().toISOString();
   res.status(200).json(success({ departmentId: dept.departmentId }));
 }

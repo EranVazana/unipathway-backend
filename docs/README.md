@@ -152,7 +152,7 @@ The `x-user-role` header is required on all protected routes.
 
 | Resource | Method | admin | editor | user |
 |---|---|:---:|:---:|:---:|
-| **Users** | GET | ✅ | ✅ | ✅ |
+| **Users** | GET | ✅ | ✅ | ✅ (self only)|
 | | POST | ✅ | ❌ | ❌ |
 | | PUT | ✅ | ❌ | ✅ (self only) |
 | | DELETE | ✅ | ❌ | ❌ |
@@ -168,11 +168,11 @@ The `x-user-role` header is required on all protected routes.
 | | POST | ✅ | ✅ | ❌ |
 | | PUT | ✅ | ✅ | ❌ |
 | | DELETE | ✅ | ❌ | ❌ |
-| **Academic Scores** | GET | ✅ | ❌ | ✅ |
+| **Academic Scores** | GET | ✅ | ❌ | ✅ (self only)|
 | | POST | ✅ | ❌ | ✅ |
 | | PUT | ✅ | ❌ | ✅ |
 | | DELETE | ✅ | ❌ | ✅ |
-| **Watchlist** | GET | ✅ | ❌ | ✅ |
+| **Watchlist** | GET | ✅ | ❌ | ✅ (self only)|
 | | POST | ✅ | ❌ | ✅ |
 | | PUT | ✅ | ❌ | ✅ |
 | | DELETE | ✅ | ❌ | ✅ |

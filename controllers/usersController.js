@@ -1,5 +1,6 @@
 const { users, getNextId } = require('../models/usersData');
 const { settings, getDefaultSettings } = require('../models/settingsData');
+const { hashPassword } = require('../utils/passwordHasher');
 
 const success = (data) => ({ success: true, data, error: null });
 const failure = (code, message, details = {}) => ({
@@ -9,7 +10,15 @@ const failure = (code, message, details = {}) => ({
 });
 
 function getAllUsers(req, res) {
-  res.status(200).json(success(users));
+  const enriched = users.map((u) => {
+    const userSettings = settings.find((s) => s.userId === u.userId);
+    return {
+      ...u,
+      email: userSettings?.email || null,
+      username: userSettings?.username || null
+    };
+  });
+  res.status(200).json(success(enriched));
 }
 
 // GET /api/users/me — identifies the current user via x-user-id, returns identity + non-sensitive settings
@@ -98,6 +107,33 @@ function updateUser(req, res) {
   res.status(200).json(success({ userId: user.userId }));
 }
 
+// PUT /api/users/:id/settings — admin-only: update any user's email, username, or password
+function updateUserSettings(req, res) {
+  const user = users.find(u => u.userId === req.parsedId);
+  if (!user) {
+    return res.status(404).json(failure('NOT_FOUND', `User with id ${req.parsedId} not found.`, { resource: 'user', id: req.parsedId }));
+  }
+
+  let entry = settings.find(s => s.userId === req.parsedId);
+  if (!entry) {
+    entry = getDefaultSettings(req.parsedId);
+    settings.push(entry);
+  }
+
+  const { username, email, password } = req.body;
+
+  if (username !== undefined) entry.username = username;
+  if (email !== undefined) entry.email = email;
+  if (password !== undefined) {
+    const { salt, hash } = hashPassword(password);
+    entry.passwordSalt = salt;
+    entry.passwordHash = hash;
+  }
+
+  const { passwordHash, passwordSalt, ...safe } = entry;
+  res.status(200).json(success(safe));
+}
+
 function deleteUser(req, res) {
   const index = users.findIndex(u => u.userId === req.parsedId);
   if (index === -1) {
@@ -112,4 +148,4 @@ function deleteUser(req, res) {
   res.status(200).json(success({ userId: req.parsedId }));
 }
 
-module.exports = { getAllUsers, getUserById, getCurrentUser, createUser, updateUser, deleteUser };
+module.exports = { getAllUsers, getUserById, getCurrentUser, createUser, updateUser, updateUserSettings, deleteUser };

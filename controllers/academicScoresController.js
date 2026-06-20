@@ -1,7 +1,7 @@
 const { academicScores, getNextId } = require('../models/academicScoresData');
 const { userWatchlist } = require('../models/userWatchlistData');
 const { admissionThresholds } = require('../models/admissionThresholdsData');
-const { deriveSekemStatus, getLatestThreshold } = require('../utils/sekemCalculator');
+const { calculateUserSekem, deriveSekemStatus, getLatestThreshold } = require('../utils/sekemCalculator');
 
 const success = (data) => ({ success: true, data, error: null });
 const failure = (code, message, details = {}) => ({
@@ -16,7 +16,6 @@ const failure = (code, message, details = {}) => ({
  */
 function recalculateWatchlistSekem(scoresEntry) {
   const entries = userWatchlist.filter(w => w.userId === scoresEntry.userId);
-  // Build a "user-like" object with scores so deriveSekemStatus can use it
   const userWithScores = {
     userId: scoresEntry.userId,
     psychometricScores: scoresEntry.psychometricScores,
@@ -25,6 +24,7 @@ function recalculateWatchlistSekem(scoresEntry) {
   for (const entry of entries) {
     const threshold = getLatestThreshold(admissionThresholds, entry.departmentId);
     entry.sekemStatus = deriveSekemStatus(userWithScores, threshold);
+    entry.userSekem   = threshold ? calculateUserSekem(userWithScores, threshold) : null;
   }
   return entries.length;
 }
@@ -89,10 +89,11 @@ function deleteAcademicScores(req, res) {
   }
   const removed = academicScores.splice(index, 1)[0];
 
-  // After deletion, recalculate (entries will get 'no-data' since scores no longer exist)
+  // After deletion, watchlist entries get 'no-data' and null sekem
   const entries = userWatchlist.filter(w => w.userId === removed.userId);
   for (const entry of entries) {
     entry.sekemStatus = 'no-data';
+    entry.userSekem   = null;
   }
 
   res.status(200).json(success({ academicScoresId: req.parsedId }));

@@ -21,13 +21,13 @@ const departments = [
   },
     { 
     departmentId: 3, 
-    universityId: 3, 
+    universityId: 1, 
     majorName: 'Information and Software Systems Engineering',   
     degreeType: 'B.Sc', 
     faculty: 'Sciences',           
     createDate: '2024-01-01T00:00:00.000Z', 
     updateDate: '2024-01-01T00:00:00.000Z',
-    description: 'Integrates software engineering methodologies with data management principles to design, build, and optimize scalable enterprise AI infrastructures.'
+    description: 'Integrates software engineering methodologies with data management principles to design, build, and optimize scalable enterprise Software and AI infrastructures.'
     },
     { 
     departmentId: 4, 

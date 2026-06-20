@@ -25,18 +25,21 @@ function getWatchlistById(req, res) {
 }
 
 function createWatchlistEntry(req, res) {
+  const userSekem = req.calculatedSekem ? req.calculatedSekem.userSekem : null;
   const newEntry = {
     watchlistId:  getNextId(),
     userId:       req.body.userId,
     departmentId: req.body.departmentId,
     status:       req.resolvedStatus,
-    sekemStatus:  req.resolvedSekemStatus
+    sekemStatus:  req.resolvedSekemStatus,
+    userSekem
   };
   userWatchlist.push(newEntry);
   res.status(201).json(success({
     watchlistId: newEntry.watchlistId,
     status:      newEntry.status,
     sekemStatus: newEntry.sekemStatus,
+    userSekem:   newEntry.userSekem,
     sekemInfo:   req.calculatedSekem || null
   }));
 }
@@ -51,7 +54,8 @@ function updateWatchlistEntry(req, res) {
   res.status(200).json(success({
     watchlistId: entry.watchlistId,
     status:      entry.status,
-    sekemStatus: entry.sekemStatus
+    sekemStatus: entry.sekemStatus,
+    userSekem:   entry.userSekem
   }));
 }
 

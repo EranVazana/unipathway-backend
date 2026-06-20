@@ -1,172 +1,45 @@
-/**
- * sekemType:
- *   'quantitative' - 27% verbal, 53% quantitative, 20% English (CS, Engineering)
- *   'verbal'       - 53% verbal, 27% quantitative, 20% English (Law, Psychology)
- *   'general'      - 40% verbal, 40% quantitative, 20% English (Business, Social Sciences)
- *
- * sekemWeights: bagrutWeight + psychometricWeight must sum to 1.
- * minSekem: minimum Sekem score required for admission that year.
- */
+// minSekem values are on the Sekem scale produced by sekemCalculator:
+//   sekem = bagrutAvg(0-100) × bagrutWeight + psychometric(200-800) × psychometricWeight
+// With weights summing to 1, scores typically land in the ~380-520 range.
+//
+// Reference (latest-year) sekems for the mock students:
+//   Dana (userId 5): dept1=431, dept2=459, dept3=431, dept4=471, dept5=431,
+//                    dept6=434, dept7=434, dept8=389, dept9=389
+//   Tal  (userId 6): dept1=476, dept2=509, dept3=476, dept4=522, dept5=476,
+//                    dept6=407, dept7=407, dept8=395, dept9=395
+//
+// Only bagrut-related bonuses (5-unit Math / English / Physics) are used.
+
 const admissionThresholds = [
-  // --- Computer Science, Ben-Gurion (dept 1) ---
-  {
-    thresholdId: 1,
-    departmentId: 1,
-    year: 2023,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 7 },
-      { condition: 'Periphery resident', points: 5 }
-    ],
-    minSekem: 152
-  },
-  {
-    thresholdId: 2,
-    departmentId: 1,
-    year: 2024,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 7 },
-      { condition: 'Periphery resident', points: 5 }
-    ],
-    minSekem: 155
-  },
+  // CS @ BGU (dept 1) — quantitative
+  { thresholdId: 1,  departmentId: 1, year: 2023, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }], minSekem: 450 },
+  { thresholdId: 2,  departmentId: 1, year: 2024, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }], minSekem: 460 },
 
-  // --- Computer Science, Tel Aviv (dept 2) ---
-  {
-    thresholdId: 3,
-    departmentId: 2,
-    year: 2023,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 7 },
-      { condition: '5-unit English', points: 5 }
-    ],
-    minSekem: 169
-  },
-  {
-    thresholdId: 4,
-    departmentId: 2,
-    year: 2024,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 7 },
-      { condition: '5-unit English', points: 5 }
-    ],
-    minSekem: 172
-  },
+  // CS @ TAU (dept 2) — quantitative, competitive
+  { thresholdId: 3,  departmentId: 2, year: 2023, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.35, psychometricWeight: 0.65 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }], minSekem: 490 },
+  { thresholdId: 4,  departmentId: 2, year: 2024, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.35, psychometricWeight: 0.65 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }], minSekem: 500 },
 
-  // --- Information Systems, Hebrew University (dept 3) ---
-  {
-    thresholdId: 5,
-    departmentId: 3,
-    year: 2024,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 7 }
-    ],
-    minSekem: 160
-  },
+  // Info Systems @ Hebrew U (dept 3) — quantitative, accessible
+  { thresholdId: 5,  departmentId: 3, year: 2024, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 }, sekemBonuses: [], minSekem: 420 },
 
-  // --- Software Engineering, Technion (dept 4) ---
-  {
-    thresholdId: 6,
-    departmentId: 4,
-    year: 2023,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.33, psychometricWeight: 0.67 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 10 },
-      { condition: '5-unit Physics', points: 7 }
-    ],
-    minSekem: 177
-  },
-  {
-    thresholdId: 7,
-    departmentId: 4,
-    year: 2024,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.33, psychometricWeight: 0.67 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 10 },
-      { condition: '5-unit Physics', points: 7 }
-    ],
-    minSekem: 180
-  },
+  // Software Eng @ Technion (dept 4) — quantitative, most competitive
+  { thresholdId: 6,  departmentId: 4, year: 2023, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.33, psychometricWeight: 0.67 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }, { condition: '5-unit Physics', points: 8 }], minSekem: 500 },
+  { thresholdId: 7,  departmentId: 4, year: 2024, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.33, psychometricWeight: 0.67 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }, { condition: '5-unit Physics', points: 8 }], minSekem: 510 },
 
-  // --- Industrial Engineering, Ben-Gurion (dept 5) ---
-  {
-    thresholdId: 8,
-    departmentId: 5,
-    year: 2024,
-    sekemType: 'quantitative',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 7 },
-      { condition: 'Periphery resident', points: 5 }
-    ],
-    minSekem: 142
-  },
+  // Industrial Eng @ BGU (dept 5) — quantitative, accessible
+  { thresholdId: 8,  departmentId: 5, year: 2024, sekemType: 'quantitative', sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 }, sekemBonuses: [{ condition: '5-unit Math', points: 10 }], minSekem: 425 },
 
-  // --- Law, Tel Aviv (dept 6) ---
-  {
-    thresholdId: 9,
-    departmentId: 6,
-    year: 2024,
-    sekemType: 'verbal',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit English', points: 5 }
-    ],
-    minSekem: 178
-  },
+  // Law @ TAU (dept 6) — verbal, competitive
+  { thresholdId: 9,  departmentId: 6, year: 2024, sekemType: 'verbal',       sekemWeights: { bagrutWeight: 0.45, psychometricWeight: 0.55 }, sekemBonuses: [{ condition: '5-unit English', points: 8 }], minSekem: 430 },
 
-  // --- Psychology, Hebrew University (dept 7) ---
-  {
-    thresholdId: 10,
-    departmentId: 7,
-    year: 2024,
-    sekemType: 'verbal',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit English', points: 5 },
-      { condition: 'Honors bagrut (100+ avg)', points: 5 }
-    ],
-    minSekem: 175
-  },
+  // Psychology @ Hebrew U (dept 7) — verbal, very competitive
+  { thresholdId: 10, departmentId: 7, year: 2024, sekemType: 'verbal',       sekemWeights: { bagrutWeight: 0.45, psychometricWeight: 0.55 }, sekemBonuses: [{ condition: '5-unit English', points: 8 }], minSekem: 445 },
 
-  // --- Business Administration, Haifa (dept 8) ---
-  {
-    thresholdId: 11,
-    departmentId: 8,
-    year: 2024,
-    sekemType: 'general',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit Math', points: 5 },
-      { condition: '5-unit English', points: 5 }
-    ],
-    minSekem: 148
-  },
+  // Business Admin @ Haifa (dept 8) — general, accessible
+  { thresholdId: 11, departmentId: 8, year: 2024, sekemType: 'general',      sekemWeights: { bagrutWeight: 0.50, psychometricWeight: 0.50 }, sekemBonuses: [], minSekem: 385 },
 
-  // --- Communication Studies, Bar-Ilan (dept 9) ---
-  {
-    thresholdId: 12,
-    departmentId: 9,
-    year: 2024,
-    sekemType: 'general',
-    sekemWeights: { bagrutWeight: 0.40, psychometricWeight: 0.60 },
-    sekemBonuses: [
-      { condition: '5-unit English', points: 5 },
-      { condition: 'Jewish studies bonus', points: 3 }
-    ],
-    minSekem: 135
-  }
+  // Communication @ Bar-Ilan (dept 9) — general, most accessible
+  { thresholdId: 12, departmentId: 9, year: 2024, sekemType: 'general',      sekemWeights: { bagrutWeight: 0.50, psychometricWeight: 0.50 }, sekemBonuses: [], minSekem: 400 }
 ];
 
 let nextId = 13;
