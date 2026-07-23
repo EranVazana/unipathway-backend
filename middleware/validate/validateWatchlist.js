@@ -1,3 +1,5 @@
+// middleware/validate/validateWatchlist.js
+
 const { failure } = require('./common');
 const { users } = require('../../models/usersData');
 const { departments } = require('../../models/departmentsData');
@@ -8,10 +10,6 @@ const { calculateUserSekem, deriveSekemStatus, getLatestThreshold } = require('.
 
 const VALID_INTENT_STATUSES = ['Interested', 'Applied', 'Accepted', 'Rejected'];
 
-/**
- * Looks up academic scores for a user and builds a user-like object
- * compatible with the sekemCalculator (which expects scores on the user).
- */
 function getUserWithScores(userId) {
   const user = users.find(u => u.userId === userId);
   if (!user) return null;
@@ -51,7 +49,6 @@ function validateWatchlist(req, res, next) {
     ));
   }
 
-  // Only regular users can have a watchlist
   if (user.userRole !== 'user') {
     return res.status(400).json(failure(
       'VALIDATION_ERROR',

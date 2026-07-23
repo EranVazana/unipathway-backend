@@ -1,3 +1,5 @@
+// middleware/validate/validateAcademicScores.js
+
 const { failure, validatePsychometricScores, validateBagrutScores } = require('./common');
 const { users } = require('../../models/usersData');
 const { academicScores } = require('../../models/academicScoresData');
@@ -20,15 +22,6 @@ function validateAcademicScores(req, res, next) {
       'NOT_FOUND',
       `User with id ${userId} not found.`,
       { resource: 'user', id: userId }
-    ));
-  }
-
-  // Only regular users can have academic scores - operators don't take exams
-  if (user.userRole !== 'user') {
-    return res.status(400).json(failure(
-      'VALIDATION_ERROR',
-      `Only users with role "user" can have academic scores. User ${userId} has role "${user.userRole}".`,
-      { field: 'userId', userRole: user.userRole }
     ));
   }
 

@@ -1,3 +1,5 @@
+// controllers/userWatchlistController.js
+
 const { userWatchlist, getNextId } = require('../models/userWatchlistData');
 
 const success = (data) => ({ success: true, data, error: null });
@@ -7,7 +9,6 @@ const failure = (code, message, details = {}) => ({
   error: { code, message, details }
 });
 
-// Returns the requester's role (manager normalized to editor) and id from headers
 function requester(req) {
   let role = req.headers['x-user-role'];
   if (role === 'manager') role = 'editor';
@@ -19,8 +20,8 @@ function getAllWatchlist(req, res) {
   const { role, id } = requester(req);
   let result = [...userWatchlist];
 
-  // Users may only see their own watchlist; admins see everything
-  if (role === 'user') {
+  // Non-admins may only see their own watchlist
+  if (role !== 'admin') {
     result = result.filter(w => w.userId === id);
   }
   if (req.query.userId)       result = result.filter(w => w.userId       === parseInt(req.query.userId));
@@ -36,9 +37,9 @@ function getWatchlistById(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${req.parsedId} not found.`, { resource: 'watchlist', id: req.parsedId }));
   }
 
-  // Users may only see their own watchlist entries
+  // Non-admins may only see their own watchlist entries
   const { role, id } = requester(req);
-  if (role === 'user' && entry.userId !== id) {
+  if (role !== 'admin' && entry.userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only view your own watchlist entries.', { yourId: id }));
   }
 
@@ -46,9 +47,9 @@ function getWatchlistById(req, res) {
 }
 
 function createWatchlistEntry(req, res) {
-  // Users may only add entries to their own watchlist
+  // Non-admins may only add entries to their own watchlist
   const { role, id } = requester(req);
-  if (role === 'user' && req.body.userId !== id) {
+  if (role !== 'admin' && req.body.userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only add to your own watchlist.', { yourId: id }));
   }
 
@@ -77,9 +78,9 @@ function updateWatchlistEntry(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${req.parsedId} not found.`, { resource: 'watchlist', id: req.parsedId }));
   }
 
-  // Users may only update their own watchlist entries
+  // Non-admins may only update their own watchlist entries
   const { role, id } = requester(req);
-  if (role === 'user' && entry.userId !== id) {
+  if (role !== 'admin' && entry.userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only update your own watchlist entries.', { yourId: id }));
   }
 
@@ -99,9 +100,9 @@ function deleteWatchlistEntry(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `Watchlist entry with id ${req.parsedId} not found.`, { resource: 'watchlist', id: req.parsedId }));
   }
 
-  // Users may only delete their own watchlist entries
+  // Non-admins may only delete their own watchlist entries
   const { role, id } = requester(req);
-  if (role === 'user' && userWatchlist[index].userId !== id) {
+  if (role !== 'admin' && userWatchlist[index].userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only delete your own watchlist entries.', { yourId: id }));
   }
 

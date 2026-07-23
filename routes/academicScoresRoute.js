@@ -1,3 +1,5 @@
+// routes/academicScoresRoute.js
+
 const express = require('express');
 const router = express.Router();
 const authorize = require('../middleware/authorize');
@@ -13,12 +15,13 @@ const {
   deleteAcademicScores
 } = require('../controllers/academicScoresController');
 
-// Resolves the owning userId of an academic-scores entry by its :id (or null if not found)
 const ownerById = (req) => {
   const entry = academicScores.find(s => s.academicScoresId === req.parsedId);
   return entry ? entry.userId : null;
 };
 
+// Editors are excluded — academic scores are student-only data.
+// admin: full access | user: own data only (enforced by controller / enforceSelfForUsers)
 router.get('/',       authorize('admin', 'user'), getAllAcademicScores);
 router.get('/:id',    authorize('admin', 'user'), validateId, getAcademicScoresById);
 router.post('/',      authorize('admin', 'user'), enforceSelfForUsers(req => req.body.userId), validateAcademicScores, createAcademicScores);

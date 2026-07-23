@@ -1,3 +1,5 @@
+// routes/userWatchlistRoute.js
+
 const express = require('express');
 const router = express.Router();
 const authorize = require('../middleware/authorize');
@@ -7,12 +9,13 @@ const { validateWatchlist, validateWatchlistUpdate } = require('../middleware/va
 const { userWatchlist } = require('../models/userWatchlistData');
 const { getAllWatchlist, getWatchlistById, createWatchlistEntry, updateWatchlistEntry, deleteWatchlistEntry } = require('../controllers/userWatchlistController');
 
-// Resolves the owning userId of a watchlist entry by its :id (or null if not found)
 const ownerById = (req) => {
   const entry = userWatchlist.find(w => w.watchlistId === req.parsedId);
   return entry ? entry.userId : null;
 };
 
+// Editors are excluded — watchlist entries are student-only data.
+// admin: full access | user: own data only (enforced by controller / enforceSelfForUsers)
 router.get('/',       authorize('admin', 'user'), getAllWatchlist);
 router.get('/:id',    authorize('admin', 'user'), validateId, getWatchlistById);
 router.post('/',      authorize('admin', 'user'), enforceSelfForUsers(req => req.body.userId), validateWatchlist, createWatchlistEntry);

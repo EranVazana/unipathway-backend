@@ -1,6 +1,6 @@
 # UniPathway Backend API
 
-Assignment 2 — Node.js + Express, mock in-memory data.
+Assignment 2 - Node.js + Express, mock in-memory data.
 
 **Students:** Eran Vazana (207778788), Omri Hershkovich (318760477)
 
@@ -25,25 +25,26 @@ npm test          # run automated tests (server must be running, requires Node 1
 
 All endpoints are relative to the base URL. For example:
 ```
-GET http://localhost:3000/users
-POST http://localhost:3000/departments
+GET http://localhost:3000/api/users
+POST http://localhost:3000/api/departments
 ```
 
 ---
 
 ## API Base Path
 
-The API base path is `/`. All resources are available directly under the root:
+The API base path is `/api`. All resources are available under this prefix:
 
-| Resource              | Path                    |
-|-----------------------|-------------------------|
-| Authentication        | `/login`                |
-| Users                 | `/users`                |
-| Universities          | `/universities`         |
-| Departments           | `/departments`          |
-| Admission Thresholds  | `/admission-thresholds` |
-| Academic Scores       | `/academic-scores`      |
-| User Watchlist        | `/watchlist`            |
+| Resource              | Path                              |
+|-----------------------|-----------------------------------|
+| Authentication        | `/api/auth/login`, `/api/auth/register` |
+| Users                 | `/api/users`                      |
+| Universities          | `/api/universities`               |
+| Departments           | `/api/departments`                |
+| Admission Thresholds  | `/api/admission-thresholds`       |
+| Academic Scores       | `/api/academic-scores`            |
+| User Watchlist        | `/api/watchlist`                  |
+| Settings              | `/api/settings`                   |
 
 ---
 
@@ -52,14 +53,16 @@ The API base path is `/`. All resources are available directly under the root:
 - **IDs** are numeric, auto-incremented integers starting from 1. Each model maintains its own counter. New records created via POST never collide with existing mock IDs within a single server session.
 - **Data is in-memory only.** All data resets when the server restarts. MySQL will replace this in Assignment 3.
 - **Login** is available via `POST /login` with email and password. Passwords are hashed with Node's built-in `crypto` (scrypt) plus a per-user random salt, and are never returned in any API response.
+- **Registration** is available via `POST /auth/register`. It creates a new user with role `user`, a linked settings record, and a default academic scores entry in a single atomic operation. The default scores use placeholder values that the user can update via `PUT /academic-scores/:id`.
 - **Authorization is simulated** via the `x-user-role` request header (`admin`, `editor`, or `user`). The legacy value `manager` is accepted as an alias for `editor`. The optional `x-user-id` header identifies the current user, enabling self-update on their own user record. Token-based sessions (JWT) will replace the header simulation in Assignment 3.
 - **Self-update:** A user with `userRole: 'user'` can `PUT /users/:id` on their own record by sending `x-user-id` matching `:id`. Self-updates cannot change `userRole` — only admins can modify roles.
 - **Email must be unique** across users and is required on user creation. Passwords are required (minimum 6 characters) and stored only as a salted hash.
 - **User identity vs. Settings split:** `User` holds only immutable identity fields (`userId`, `firstName`, `lastName`, `userRole`, timestamps). Everything a user can change lives in `UserSettings` (`username`, `email`, `password`, `theme`), linked 1:1 by `userId`. `theme` accepts `light` or `dark` and defaults to `light` for new users.
 - **`createDate` and `updateDate`** are set automatically by the server using `new Date().toISOString()`. They are never provided by the client.
 - **`sekemStatus`** on watchlist entries is always calculated server-side based on the user's academic scores vs the department's latest admission threshold. Clients cannot set or override this value.
-- **Academic scores are a separate resource.** Only users with `userRole: 'user'` can have academic scores. Admins and editors are platform operators, not students, so they have no scores. One scores entry per user is allowed.
-- **Watchlist entries** are only allowed for users with `userRole: 'user'`. Admins and editors cannot have a watchlist.
+- **Academic scores are a separate resource.** Only users with `userRole: 'user'` can *have* academic scores (admins and editors are platform operators, not students). However, admins and editors can read and manage all score entries. One scores entry per user is allowed.
+- **Default academic scores** are seeded automatically whenever a new `user`-role account is created (via `POST /users` by an admin, or via `POST /auth/register`). The seeded entry uses placeholder values so the user always has a scores record to update rather than having to create one.
+- **Watchlist entries** are only allowed for users with `userRole: 'user'`. Admins and editors do not have their own watchlist entries, but they can read and manage all watchlist entries across all users.
 - **Bagrut scores** require all 7 mandatory subjects (bibleStudies, literature, hebrewExpression, history, civics, mathematics, english) with minimum unit requirements per subject.
 - **Psychometric scores** require all 3 fields (verbal, quantitative, english) as numbers between 50 and 150.
 - **`sekemBonuses`** on admission thresholds are optional and default to an empty array if not provided.
@@ -143,7 +146,7 @@ Request → logger → authorize → validateId → validateBody → controller 
 Three roles exist with distinct purposes:
 
 - **admin** — full system control (the operator)
-- **editor** — curates academic content (universities, departments, thresholds). Cannot touch user data or student data
+- **editor** — curates academic content (universities, departments, thresholds). Can also view and manage academic scores and watchlist entries
 - **user** — regular student. Manages their own scores and watchlist. Cannot modify platform data
 
 The `x-user-role` header is required on all protected routes.
@@ -168,18 +171,18 @@ The `x-user-role` header is required on all protected routes.
 | | POST | ✅ | ✅ | ❌ |
 | | PUT | ✅ | ✅ | ❌ |
 | | DELETE | ✅ | ❌ | ❌ |
-| **Academic Scores** | GET | ✅ | ❌ | ✅ (self only)|
-| | POST | ✅ | ❌ | ✅ |
-| | PUT | ✅ | ❌ | ✅ |
-| | DELETE | ✅ | ❌ | ✅ |
-| **Watchlist** | GET | ✅ | ❌ | ✅ (self only)|
-| | POST | ✅ | ❌ | ✅ |
-| | PUT | ✅ | ❌ | ✅ |
-| | DELETE | ✅ | ❌ | ✅ |
+| **Academic Scores** | GET | ✅ | ✅ | ✅ (self only)|
+| | POST | ✅ | ✅ | ✅ |
+| | PUT | ✅ | ✅ | ✅ |
+| | DELETE | ✅ | ✅ | ✅ |
+| **Watchlist** | GET | ✅ | ✅ | ✅ (self only)|
+| | POST | ✅ | ✅ | ✅ |
+| | PUT | ✅ | ✅ | ✅ |
+| | DELETE | ✅ | ✅ | ✅ |
 | **Settings** | GET | ✅ | ✅ (self only) | ✅ (self only)|
 | | PUT | ✅ | ✅ (self only) | ✅ |
 
-> Editors are **completely blocked** from Academic Scores and Watchlist — these contain private student data that has nothing to do with content curation.
+> Users can only access their **own** academic scores and watchlist entries. Admins and editors have full access across all users.
 
 ---
 
@@ -239,13 +242,16 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 ## API Reference
 
-### Authentication — `/login`
+### Authentication — `/login`, `/auth/register`
 
 | Method | Path | Role | Description |
 |--------|------|------|-------------|
 | POST | /login | public | Authenticate with email and password |
+| POST | /auth/register | public | Register a new student account |
 
-**POST body:**
+#### POST /login
+
+**Body:**
 ```json
 {
   "email": "dana@unipathway.com",
@@ -290,6 +296,55 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 > The same generic message is returned whether the email is unknown or the password is wrong, to avoid revealing which emails are registered.
 
+#### POST /auth/register
+
+Creates a new account with `userRole: 'user'`, a linked settings record, and a default academic scores entry.
+
+**Body:**
+```json
+{
+  "firstName": "string",
+  "lastName": "string",
+  "username": "string (3-20 chars, letters/numbers/underscores)",
+  "email": "user@example.com",
+  "password": "string (min 6 chars)"
+}
+```
+
+> `userRole` is always set to `'user'` for self-registration. To create admin or editor accounts, use `POST /users` with an admin role.
+
+**Success response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Registration successful.",
+    "user": {
+      "userId": 7,
+      "firstName": "Noa",
+      "lastName": "Levi",
+      "userRole": "user",
+      "createDate": "2024-04-10T09:00:00.000Z",
+      "updateDate": "2024-04-10T09:00:00.000Z"
+    }
+  },
+  "error": null
+}
+```
+
+**Error response (400 — email already taken):**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "A user with this email already exists.",
+    "details": { "field": "email" }
+  }
+}
+```
+
 ---
 
 ### Users — `/users`
@@ -302,7 +357,7 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 | PUT | /users/:id | admin, self | — | Update user (users can self-update via `x-user-id` matching `:id`) |
 | DELETE | /users/:id | admin | — | Delete user |
 
-**POST body** (creates both the identity record and a linked settings record):
+**POST body** (creates both the identity record and a linked settings record; also seeds a default academic scores entry for `userRole: 'user'`):
 ```json
 {
   "firstName": "string",
@@ -530,11 +585,11 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 | Method | Path | Role | Query Params | Description |
 |--------|------|------|-------------|-------------|
-| GET | /academic-scores | admin, user | ?userId= | List academic scores |
-| GET | /academic-scores/:id | admin, user | — | Get one academic scores entry |
-| POST | /academic-scores | admin, user | — | Create scores for a user |
-| PUT | /academic-scores/:id | admin, user | — | Update scores |
-| DELETE | /academic-scores/:id | admin, user | — | Delete scores |
+| GET | /academic-scores | admin, editor, user | ?userId= | List academic scores |
+| GET | /academic-scores/:id | admin, editor, user | — | Get one academic scores entry |
+| POST | /academic-scores | admin, editor, user | — | Create scores for a user |
+| PUT | /academic-scores/:id | admin, editor, user | — | Update scores |
+| DELETE | /academic-scores/:id | admin, editor, user | — | Delete scores |
 
 **POST body:**
 ```json
@@ -558,7 +613,7 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 }
 ```
 
-> Only users with `userRole: 'user'` can have academic scores. Attempting to create scores for an admin or editor returns 400. Each user is allowed at most one scores entry.
+> Only users with `userRole: 'user'` can *have* academic scores (creating scores for an admin or editor returns 400). Admins and editors can read and manage existing score entries. Each user is allowed at most one scores entry. A default entry is seeded automatically on account creation — use PUT to update it rather than POST.
 
 **PUT body:** Same as POST without `userId` (the user link cannot be changed).
 
@@ -593,11 +648,11 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
 
 | Method | Path | Role | Query Params | Description |
 |--------|------|------|-------------|-------------|
-| GET | /watchlist | admin, user | ?userId= ?departmentId= ?status= ?sekemStatus= | List entries |
-| GET | /watchlist/:id | admin, user | — | Get one entry |
-| POST | /watchlist | admin, user | — | Add to watchlist |
-| PUT | /watchlist/:id | admin, user | — | Update intent status |
-| DELETE | /watchlist/:id | admin, user | — | Remove from watchlist |
+| GET | /watchlist | admin, editor, user | ?userId= ?departmentId= ?status= ?sekemStatus= | List entries |
+| GET | /watchlist/:id | admin, editor, user | — | Get one entry |
+| POST | /watchlist | admin, editor, user | — | Add to watchlist |
+| PUT | /watchlist/:id | admin, editor, user | — | Update intent status |
+| DELETE | /watchlist/:id | admin, editor, user | — | Remove from watchlist |
 
 **POST body:**
 ```json
@@ -657,11 +712,3 @@ sekem = (bagrutWeightedAvg × bagrutWeight) + (psychoScore × psychometricWeight
   }
 }
 ```
-
----
-
-## Notes
-
-- IDs are auto-incremented integers. Data resets on server restart (in-memory only).
-- The automated test script (`docs/test.js`) requires Node.js 18+ for built-in `fetch`.
-- Last updated: 20.5.26

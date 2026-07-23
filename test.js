@@ -60,6 +60,152 @@ const sampleBagrut = {
 const samplePsychometric = { verbal: 110, quantitative: 120, english: 115 };
 
 // ──────────────────────────────────────────────────────────────────────
+async function testAuth() {
+  section('AUTHENTICATION / LOGIN');
+
+  // Successful login
+  let r = await post('/auth/login', { email: 'dana@unipathway.com', password: 'dana1234' });
+  assert('POST /login (valid) → 200',                     r.status, 200);
+  assert('POST /login → returns user',                    r.data.data.user.userId, 5);
+  assert('POST /login → no passwordHash leaked',          r.data.data.user.passwordHash, undefined);
+  assert('POST /login → no passwordSalt leaked',          r.data.data.user.passwordSalt, undefined);
+
+  // Wrong password
+  r = await post('/auth/login', { email: 'dana@unipathway.com', password: 'wrongpass' });
+  assert('POST /login (wrong password) → 401',            r.status, 401);
+  assert('POST /login (wrong password) → INVALID_CREDENTIALS', r.data.error.code, 'INVALID_CREDENTIALS');
+
+  // Unknown email
+  r = await post('/auth/login', { email: 'nobody@unipathway.com', password: 'whatever' });
+  assert('POST /login (unknown email) → 401',             r.status, 401);
+
+  // Missing fields
+  r = await post('/auth/login', { email: 'dana@unipathway.com' });
+  assert('POST /login (missing password) → 400',          r.status, 400);
+
+  // Invalid email format
+  r = await post('/auth/login', { email: 'not-an-email', password: 'dana1234' });
+  assert('POST /login (bad email format) → 400',          r.status, 400);
+
+  // Newly created user can log in
+  const newEmail = `tester${Date.now()}@unipathway.com`;
+  let createR = await post('/users', {
+    firstName: 'Login', lastName: 'Tester', userRole: 'user',
+    username: `lg${Date.now()}`, email: newEmail, password: 'secret123'
+  }, { role: 'admin' });
+  if (createR.status !== 201) {
+    console.error('DEBUG createR:', JSON.stringify(createR.data, null, 2));
+  }
+  assert('Setup: create user for login test → 201',      createR.status, 201);
+  const tempId = createR.data.data.userId;
+
+  r = await post('/auth/login', { email: newEmail, password: 'secret123' });
+  assert('Login with newly created user → 200',           r.status, 200);
+
+  await del(`/users/${tempId}`, { role: 'admin' });
+
+  // ─── GET /users/me ───
+  r = await get('/users/me', { role: 'user', userId: 5 });
+  assert('GET /users/me → 200',                           r.status, 200);
+  assert('GET /users/me → correct user',                  r.data.data.userId, 5);
+  assert('GET /users/me → has theme',                     typeof r.data.data.theme, 'string');
+  assert('GET /users/me → no password leaked',            r.data.data.passwordHash, undefined);
+
+  r = await get('/users/me');
+  assert('GET /users/me (no x-user-id) → 401',            r.status, 401);
+
+  // ─── POST /auth/logout ───
+  r = await post('/auth/logout', {});
+  assert('POST /auth/logout → 200',                       r.status, 200);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+async function testRegister() {
+  section('REGISTRATION');
+
+  // Missing required fields
+  let r = await post('/auth/register', { firstName: 'Test' });
+  assert('POST /register (missing fields) → 400',         r.status, 400);
+
+  // Invalid email format
+  r = await post('/auth/register', {
+    firstName: 'Test', lastName: 'User', username: `regA${Date.now()}`,
+    email: 'not-an-email', password: 'pass1234'
+  });
+  assert('POST /register (invalid email) → 400',          r.status, 400);
+
+  // Username too short
+  r = await post('/auth/register', {
+    firstName: 'Test', lastName: 'User', username: 'ab',
+    email: `regb${Date.now()}@test.com`, password: 'pass1234'
+  });
+  assert('POST /register (short username) → 400',         r.status, 400);
+
+  // Invalid username format (special chars)
+  r = await post('/auth/register', {
+    firstName: 'Test', lastName: 'User', username: 'bad user!',
+    email: `regc${Date.now()}@test.com`, password: 'pass1234'
+  });
+  assert('POST /register (invalid username format) → 400', r.status, 400);
+
+  // Password too short
+  r = await post('/auth/register', {
+    firstName: 'Test', lastName: 'User', username: `regd${Date.now()}`,
+    email: `regd${Date.now()}@test.com`, password: '123'
+  });
+  assert('POST /register (short password) → 400',         r.status, 400);
+
+  // Duplicate email
+  r = await post('/auth/register', {
+    firstName: 'Test', lastName: 'User', username: `rege${Date.now()}`,
+    email: 'dana@unipathway.com', password: 'pass1234'
+  });
+  assert('POST /register (duplicate email) → 400',        r.status, 400);
+
+  // Duplicate username
+  r = await post('/auth/register', {
+    firstName: 'Test', lastName: 'User', username: 'danac',
+    email: `regf${Date.now()}@test.com`, password: 'pass1234'
+  });
+  assert('POST /register (duplicate username) → 400',     r.status, 400);
+
+  // Successful registration
+  const regEmail    = `newreg${Date.now()}@test.com`;
+  const regUsername = `newreg${Date.now()}`;
+  r = await post('/auth/register', {
+    firstName: 'New', lastName: 'Reg', username: regUsername,
+    email: regEmail, password: 'pass1234'
+  });
+  assert('POST /register → 201',                          r.status, 201);
+  assert('POST /register → returns user object',          typeof r.data.data.user.userId, 'number');
+  assert('POST /register → role is user',                 r.data.data.user.userRole, 'user');
+  assert('POST /register → no passwordHash leaked',       r.data.data.user.passwordHash, undefined);
+  assert('POST /register → no passwordSalt leaked',       r.data.data.user.passwordSalt, undefined);
+
+  const newRegUserId = r.data.data.user.userId;
+
+  // Default academic scores created on registration
+  r = await get('/academic-scores', { role: 'admin' });
+  const hasDefaultScores = r.data.data.some(s => s.userId === newRegUserId);
+  assert('POST /register → default academic scores seeded', hasDefaultScores, true);
+
+  // Registered user can immediately log in
+  r = await post('/auth/login', { email: regEmail, password: 'pass1234' });
+  assert('Registered user can log in → 200',              r.status, 200);
+  assert('Login after register → correct userId',         r.data.data.user.userId, newRegUserId);
+
+  // Cannot register again with the same email
+  r = await post('/auth/register', {
+    firstName: 'Dup', lastName: 'Dup', username: `dup${Date.now()}`,
+    email: regEmail, password: 'pass1234'
+  });
+  assert('POST /register (duplicate email after reg) → 400', r.status, 400);
+
+  // Cleanup
+  await del(`/users/${newRegUserId}`, { role: 'admin' });
+}
+
+// ──────────────────────────────────────────────────────────────────────
 async function testUsers() {
   section('USERS');
 
@@ -362,12 +508,12 @@ async function testAcademicScores() {
   r = await get('/academic-scores', { role: 'user', userId: 5 });
   assert('GET /academic-scores (user) → only own',        r.data.data.every(s => s.userId === 5), true);
 
-  // user cannot read another user's scores entry by id (entry 2 belongs to Tal=6)
-  r = await get('/academic-scores/2', { role: 'user', userId: 5 });
+  // user cannot read another user's scores entry by id (entry 6 belongs to Tal=6)
+  r = await get('/academic-scores/6', { role: 'user', userId: 5 });
   assert('GET other user scores by id (user) → 403',      r.status, 403);
 
-  // user CAN read their own scores entry by id (entry 1 belongs to Dana=5)
-  r = await get('/academic-scores/1', { role: 'user', userId: 5 });
+  // user CAN read their own scores entry by id (entry 5 belongs to Dana=5)
+  r = await get('/academic-scores/5', { role: 'user', userId: 5 });
   assert('GET own scores by id (user) → 200',             r.status, 200);
 
   r = await get('/academic-scores/999', { role: 'admin' });
@@ -389,7 +535,7 @@ async function testAcademicScores() {
   r = await post('/academic-scores', { psychometricScores: samplePsychometric, bagrutScores: sampleBagrut }, { role: 'admin' });
   assert('POST (missing userId) → 400',                   r.status, 400);
 
-  // POST - cannot add scores for an admin user
+  // POST - cannot add scores for an admin user via API (admin users have seeded defaults but API blocks duplicates/invalid roles)
   r = await post('/academic-scores', { userId: 1, psychometricScores: samplePsychometric, bagrutScores: sampleBagrut }, { role: 'admin' });
   assert('POST (scores for admin user) → 400',            r.status, 400);
 
@@ -407,7 +553,14 @@ async function testAcademicScores() {
   r = await post('/academic-scores', { userId: tempUserId, psychometricScores: samplePsychometric, bagrutScores: partialBagrut }, { role: 'admin' });
   assert('POST (missing mandatory subject) → 400',        r.status, 400);
 
-  // POST - success
+  // POST - success (tempUser was created by admin so has default scores; delete them first)
+  // The registration flow seeds default scores, so we need to find and delete that entry first
+  r = await get('/academic-scores', { role: 'admin' });
+  const existingEntry = r.data.data.find(s => s.userId === tempUserId);
+  if (existingEntry) {
+    await del(`/academic-scores/${existingEntry.academicScoresId}`, { role: 'admin' });
+  }
+
   r = await post('/academic-scores', { userId: tempUserId, psychometricScores: samplePsychometric, bagrutScores: sampleBagrut }, { role: 'admin' });
   assert('POST /academic-scores → 201',                   r.status, 201);
   assert('POST → watchlistEntriesRecalculated is number', typeof r.data.data.watchlistEntriesRecalculated, 'number');
@@ -425,8 +578,8 @@ async function testAcademicScores() {
   assert('PUT /academic-scores → 200',                    r.status, 200);
   assert('PUT → watchlistEntriesRecalculated is number',  typeof r.data.data.watchlistEntriesRecalculated, 'number');
 
-  // DELETE - editor forbidden
-  r = await del(`/academic-scores/${newScoresId}`, { role: 'editor' });
+  // DELETE - editor forbidden (send userId so auth passes; role check rejects with 403)
+  r = await del(`/academic-scores/${newScoresId}`, { role: 'editor', userId: 3 });
   assert('DELETE /academic-scores (editor) → 403',        r.status, 403);
 
   // DELETE - admin
@@ -518,8 +671,8 @@ async function testWatchlist() {
   r = await put(`/watchlist/${newEntryId}`, { status: 'passed-required-acceptance-score' }, { role: 'user', userId: 5 });
   assert('PUT (sekem status as status) → 400',            r.status, 400);
 
-  // DELETE - editor forbidden
-  r = await del(`/watchlist/${newEntryId}`, { role: 'editor' });
+  // DELETE - editor forbidden (send userId so auth passes; role check rejects with 403)
+  r = await del(`/watchlist/${newEntryId}`, { role: 'editor', userId: 3 });
   assert('DELETE /watchlist (editor) → 403',              r.status, 403);
 
   // DELETE - a different user cannot delete Dana's entry (Tal=6 trying)
@@ -529,67 +682,6 @@ async function testWatchlist() {
   // DELETE - Dana deletes her own entry
   r = await del(`/watchlist/${newEntryId}`, { role: 'user', userId: 5 });
   assert('DELETE /watchlist/:id → 200',                   r.status, 200);
-}
-
-
-// ──────────────────────────────────────────────────────────────────────
-async function testAuth() {
-  section('AUTHENTICATION / LOGIN');
-
-  // Successful login
-  let r = await post('/auth/login', { email: 'dana@unipathway.com', password: 'dana1234' });
-  assert('POST /login (valid) → 200',                     r.status, 200);
-  assert('POST /login → returns user',                    r.data.data.user.userId, 5);
-  assert('POST /login → no passwordHash leaked',          r.data.data.user.passwordHash, undefined);
-  assert('POST /login → no passwordSalt leaked',          r.data.data.user.passwordSalt, undefined);
-
-  // Wrong password
-  r = await post('/auth/login', { email: 'dana@unipathway.com', password: 'wrongpass' });
-  assert('POST /login (wrong password) → 401',            r.status, 401);
-  assert('POST /login (wrong password) → INVALID_CREDENTIALS', r.data.error.code, 'INVALID_CREDENTIALS');
-
-  // Unknown email
-  r = await post('/auth/login', { email: 'nobody@unipathway.com', password: 'whatever' });
-  assert('POST /login (unknown email) → 401',             r.status, 401);
-
-  // Missing fields
-  r = await post('/auth/login', { email: 'dana@unipathway.com' });
-  assert('POST /login (missing password) → 400',          r.status, 400);
-
-  // Invalid email format
-  r = await post('/auth/login', { email: 'not-an-email', password: 'dana1234' });
-  assert('POST /login (bad email format) → 400',          r.status, 400);
-
-  // Newly created user can log in
-  const newEmail = `tester${Date.now()}@unipathway.com`;
-  let createR = await post('/users', {
-    firstName: 'Login', lastName: 'Tester', userRole: 'user',
-    username: `lg${Date.now()}`, email: newEmail, password: 'secret123'
-  }, { role: 'admin' });
-  if (createR.status !== 201) {
-    console.error('DEBUG createR:', JSON.stringify(createR.data, null, 2));
-  }
-  assert('Setup: create user for login test → 201',      createR.status, 201);
-  const tempId = createR.data.data.userId;
-
-  r = await post('/auth/login', { email: newEmail, password: 'secret123' });
-  assert('Login with newly created user → 200',           r.status, 200);
-
-  await del(`/users/${tempId}`, { role: 'admin' });
-
-  // ─── GET /users/me ───
-  r = await get('/users/me', { role: 'user', userId: 5 });
-  assert('GET /users/me → 200',                           r.status, 200);
-  assert('GET /users/me → correct user',                  r.data.data.userId, 5);
-  assert('GET /users/me → has theme',                     typeof r.data.data.theme, 'string');
-  assert('GET /users/me → no password leaked',            r.data.data.passwordHash, undefined);
-
-  r = await get('/users/me');
-  assert('GET /users/me (no x-user-id) → 401',            r.status, 401);
-
-  // ─── POST /auth/logout ───
-  r = await post('/auth/logout', {});
-  assert('POST /auth/logout → 200',                       r.status, 200);
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -704,6 +796,7 @@ async function run() {
 
   try {
     await testAuth();
+    await testRegister();
     await testUsers();
     await testUniversities();
     await testDepartments();
@@ -727,9 +820,6 @@ async function run() {
   else            console.log('🎉 All tests passed!');
   console.log('─'.repeat(40));
 
-  // Use exitCode instead of process.exit() so Node can clean up pending
-  // async handles (sockets, timers) naturally before the process ends.
-  // process.exit() can race with libuv handle cleanup on Windows and crash.
   process.exitCode = failed > 0 ? 1 : 0;
 }
 

@@ -1,3 +1,5 @@
+// controllers/academicScoresController.js
+
 const { academicScores, getNextId } = require('../models/academicScoresData');
 const { userWatchlist } = require('../models/userWatchlistData');
 const { admissionThresholds } = require('../models/admissionThresholdsData');
@@ -10,10 +12,6 @@ const failure = (code, message, details = {}) => ({
   error: { code, message, details }
 });
 
-/**
- * Recalculates sekemStatus for all watchlist entries of a given user
- * after their academic scores are updated.
- */
 function recalculateWatchlistSekem(scoresEntry) {
   const entries = userWatchlist.filter(w => w.userId === scoresEntry.userId);
   const userWithScores = {
@@ -29,7 +27,6 @@ function recalculateWatchlistSekem(scoresEntry) {
   return entries.length;
 }
 
-// Returns the requester's role (manager normalized to editor) and id from headers
 function requester(req) {
   let role = req.headers['x-user-role'];
   if (role === 'manager') role = 'editor';
@@ -41,8 +38,8 @@ function getAllAcademicScores(req, res) {
   const { role, id } = requester(req);
   let result = [...academicScores];
 
-  // Users may only see their own scores; admins see everything
-  if (role === 'user') {
+  // Non-admins may only see their own scores
+  if (role !== 'admin') {
     result = result.filter(s => s.userId === id);
   }
   if (req.query.userId) {
@@ -57,9 +54,9 @@ function getAcademicScoresById(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `Academic scores entry with id ${req.parsedId} not found.`, { resource: 'academicScores', id: req.parsedId }));
   }
 
-  // Users may only see their own scores
+  // Non-admins may only see their own scores
   const { role, id } = requester(req);
-  if (role === 'user' && entry.userId !== id) {
+  if (role !== 'admin' && entry.userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only view your own academic scores.', { yourId: id }));
   }
 
@@ -69,9 +66,9 @@ function getAcademicScoresById(req, res) {
 function createAcademicScores(req, res) {
   const { userId, psychometricScores, bagrutScores } = req.body;
 
-  // Users may only create scores for themselves
+  // Non-admins may only create scores for themselves
   const { role, id } = requester(req);
-  if (role === 'user' && userId !== id) {
+  if (role !== 'admin' && userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only create academic scores for yourself.', { yourId: id }));
   }
 
@@ -99,9 +96,9 @@ function updateAcademicScores(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `Academic scores entry with id ${req.parsedId} not found.`, { resource: 'academicScores', id: req.parsedId }));
   }
 
-  // Users may only update their own scores
+  // Non-admins may only update their own scores
   const { role, id } = requester(req);
-  if (role === 'user' && entry.userId !== id) {
+  if (role !== 'admin' && entry.userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only update your own academic scores.', { yourId: id }));
   }
 
@@ -123,15 +120,14 @@ function deleteAcademicScores(req, res) {
     return res.status(404).json(failure('NOT_FOUND', `Academic scores entry with id ${req.parsedId} not found.`, { resource: 'academicScores', id: req.parsedId }));
   }
 
-  // Users may only delete their own scores
+  // Non-admins may only delete their own scores
   const { role, id } = requester(req);
-  if (role === 'user' && academicScores[index].userId !== id) {
+  if (role !== 'admin' && academicScores[index].userId !== id) {
     return res.status(403).json(failure('FORBIDDEN', 'You may only delete your own academic scores.', { yourId: id }));
   }
 
   const removed = academicScores.splice(index, 1)[0];
 
-  // After deletion, watchlist entries get 'no-data' and null sekem
   const entries = userWatchlist.filter(w => w.userId === removed.userId);
   for (const entry of entries) {
     entry.sekemStatus = 'no-data';
